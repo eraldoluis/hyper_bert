@@ -84,10 +84,17 @@ def main():
 
     cloze = ClozeBert("bert-base-multilingual-cased")
 
-    texts = ["Carros são usados para se locomover . Carro é um tipo de [MASK] [MASK] .",
-             "Carros são usados para se locomover . Carro é um tipo de [MASK] .",
-             "As pessoas vivem em casas . Casa é um tipo de [MASK] .",
-             "As pessoas vivem em casas . Casa é um tipo de [MASK] [MASK] ."]
+    # texts = ["Carros são usados para se locomover . Carro é um tipo de [MASK] [MASK] .",
+    #          "Carros são usados para se locomover . Carro é um tipo de [MASK] .",
+    #          "As pessoas vivem em casas . Casa é um tipo de [MASK] .",
+    #          "As pessoas vivem em casas . Casa é um tipo de [MASK] [MASK] ."]
+    texts = ["Carro é um tipo de [MASK] [MASK] .",
+             "Casa é um tipo de [MASK] .",
+             "avião é um [MASK] .",
+             "notebook é um [MASK] .",
+             "gabriel é um [MASK] ."
+             ]
+
 
     words_probs_s = cloze.most_probabable_words(texts)
 
