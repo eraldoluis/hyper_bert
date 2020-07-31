@@ -25,8 +25,8 @@ import random
 
 import numpy as np
 import torch
-from seqeval.metrics import precision_score, recall_score, f1_score
-from tensorboardX import SummaryWriter
+# from seqeval.metrics import precision_score, recall_score, f1_score
+# from tensorboardX import SummaryWriter
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
