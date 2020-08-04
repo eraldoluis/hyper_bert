@@ -49,7 +49,7 @@ class ClozeBert:
 
         return words_probs_s
 
-    def sentence_score(self, patterns, dataset, vocab_dive):
+    def old_sentence_score(self, patterns, dataset, vocab_dive):
         words_probs_s = {}
         hyper = True
         oov = 0
@@ -110,9 +110,62 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
+    def sentence_score(self, patterns, dataset, vocab_dive):
+        words_probs_s = {}
+        hyper = True
+        oov = 0
+        hyper_num = 0
+
+        for row in dataset:
+            pair = row[0:2]
+            # if (pair[0] not in vocab_dive or pair[1] not in vocab_dive) and (args.include_oov):
+            #     # par nao está no vocab do dive e calculo deverá incluí-lo
+            #     words_probs_s[" ".join(row)] = {}
+            #     words_probs_s[" ".join(row)]['oov'] = float("-inf")
+            #     oov += 1
+            #     if row[3] == "hyper":
+            #         hyper_num += 1
+            #     continue
+
+            if (not args.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
+                oov += 1
+                # par nao está no vocab do dive e calculo NÃO deverá incluí-lo
+                continue
+
+            words_probs_s[" ".join(row)] = {}
+            if row[3] == "hyper":
+                hyper_num += 1
+
+            for pattern in patterns:
+                sentences, idx_h, idx_mask = self.build_sentences(pattern, pair)
+                idx_all = idx_h[0].copy()
+                idx_all.extend(idx_h[1])
+                hyponym_idx, hypernym_idx = idx_h[0], idx_h[1]
+                sentences_hyponym = sentences[:len(hyponym_idx)]
+                sentences_hypernym = sentences[-len(hypernym_idx):]
+                logger.info("Predicting...")
+                self.model.eval()
+                with torch.no_grad():
+                    examples = torch.tensor(sentences)
+                    # segments_tensors = torch.tensor([segments_ids])
+                    outputs = self.model(examples)  # , segments_tensors)
+                predict = outputs[0]
+                predict = torch.diagonal(predict[:, idx_mask, idx_all], 0)
+
+                predict_hypon = predict[:len(idx_h[0])]
+                # print(predict_hypon)
+                predict_hyper = predict[- len(idx_h[1]):]
+                # print(predict_hyper)
+                # predict for sentences. shape( len(sentences) )
+                print(predict)
+                words_probs_s[" ".join(row)][pattern] = torch.sum(predict).item()
+
+        return words_probs_s, hyper_num, oov
+
     def build_sentences(self, pattern, pair): # feito, agora falta tratar onde isso eh chamado
         sentence1 = pattern.format("[MASK]", pair[1])
         sentence2 = pattern.format(pair[0], "[MASK]")
+        logger.info("Tokenizing...")
         hyponym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
         hypernym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
         pattern1_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(sentence1))
@@ -120,6 +173,7 @@ class ClozeBert:
 
         data = []
         sentences = []
+        idx_masks = []
         # hyponym
         # if len(hyponym_tokenize) > 1: # sub-word
         idx_mask = pattern1_tokenize.index(self.tokenizer.mask_token_id)
@@ -134,6 +188,7 @@ class ClozeBert:
             row = antes.copy()
             row.extend(data[i])
             row.extend(depois)
+            idx_masks.append(row.index(self.tokenizer.mask_token_id))
             sentences.append(row)
 
         # hypernym
@@ -150,10 +205,11 @@ class ClozeBert:
             row = antes.copy()
             row.extend(data[i])
             row.extend(depois)
+            idx_masks.append(row.index(self.tokenizer.mask_token_id))
             sentences.append(row)
 
         ids = [hyponym_tokenize, hypernym_tokenize]
-        return sentences, ids
+        return sentences, ids, idx_masks
 
 
 def load_eval_file(f_in):
@@ -165,7 +221,7 @@ def load_eval_file(f_in):
         is_hyper = is_hyper.strip()
         rel = rel.strip()
         eval_data.append([child, parent, is_hyper, rel])
-    # random.shuffle(eval_data)
+    random.shuffle(eval_data)
     return eval_data
 
 
@@ -209,16 +265,16 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
                         }
     :param dataset_name: str
     """
-    methods = ["sum", "prod", "max"]
-    # somar o score dos padrões para cada par
+    methods = ["sum", "prod", "max", "min"]
     result_by_par = {}
     for pair, patterns in dict_pairs.items():
         result_by_par[pair] = {}
         result_by_par[pair]['sum'] = sum(patterns.values())
         result_by_par[pair]['prod'] = np.prod(list(patterns.values()))
         result_by_par[pair]['max'] = max(patterns.values())
+        result_by_par[pair]['min'] = min(patterns.values())
     for method in methods:
-        order_result = sorted(result_by_par.items(), key=lambda x: x[1][method], reverse=True)
+        order_result = sorted(result_by_par.items(), key=lambda x: x[1][method], reverse=False)
         ap = compute_AP(order_result)
         # model dataset N oov hyper_num method AP include_oov
         f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{method}\t'
@@ -228,6 +284,7 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
 def main():
     print("Iniciando bert")
     cloze = ClozeBert(args.model_name)
+
 
     model_name = os.path.basename(os.path.normpath(args.model_name))
     try:
@@ -244,6 +301,9 @@ def main():
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
 
+    # cloze.sentence_score(patterns, pairs, [])
+    # return None, cloze, None
+
     logger.info("Loading vocab dive ...")
     dive_vocab = []
     with open(os.path.join(args.vocab, "vocab.txt"), mode="r", encoding="utf-8") as f_vocab:
@@ -255,15 +315,15 @@ def main():
     logger.info(f"result_size={len(result)}")
     output(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out)
 
-    # for filedataset in os.listdir(args.eval_path):
-    #     if os.path.isfile(os.path.join(args.eval_path, filedataset)):
-    #         with open(os.path.join(args.eval_path, filedataset)) as f_in:
-    #             logger.info("Loading dataset ...")
-    #             eval_data = load_eval_file(f_in)
-    #             print(f"dataset={filedataset} size={len(eval_data)}")
-    #             result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data[:10], dive_vocab)
-    #             logger.info(f"result_size={len(result)}")
-    #             output(result, filedataset, model_name, hyper_total, oov_num, f_out)
+    for filedataset in os.listdir(args.eval_path):
+        if os.path.isfile(os.path.join(args.eval_path, filedataset)):
+            with open(os.path.join(args.eval_path, filedataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                print(f"dataset={filedataset} size={len(eval_data)}")
+                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data[:10], dive_vocab)
+                logger.info(f"result_size={len(result)}")
+                output(result, filedataset, model_name, hyper_total, oov_num, f_out)
     f_out.close()
     logger.info("Done")
     print("Done!")
