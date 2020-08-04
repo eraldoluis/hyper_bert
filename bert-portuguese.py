@@ -18,7 +18,7 @@ class ClozeBert:
         self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
 
-        # self.model = BertModel.from_pretrained(model_name)
+        # self.model = BertModel.from_pretrained(model_name, config=self.config)
 
     def most_probabable_words(self, texts):
         words_probs_s = []
@@ -57,16 +57,16 @@ class ClozeBert:
 
         for row in dataset:
             pair = row[0:2]
-            if (pair[0] not in vocab_dive or pair[1] not in vocab_dive) and (args.include_oov):
-                # par nao está no vocab do dive e calculo deverá incluí-lo
-                words_probs_s[" ".join(row)] = {}
-                words_probs_s[" ".join(row)]['oov'] = float("-inf")
-                oov += 1
-                if row[3] == "hyper":
-                    hyper_num += 1
-                continue
+            # if (pair[0] not in vocab_dive or pair[1] not in vocab_dive) and (args.include_oov):
+            #     # par nao está no vocab do dive e calculo deverá incluí-lo
+            #     words_probs_s[" ".join(row)] = {}
+            #     words_probs_s[" ".join(row)]['oov'] = float("-inf")
+            #     oov += 1
+            #     if row[3] == "hyper":
+            #         hyper_num += 1
+            #     continue
 
-            if (pair[0] not in vocab_dive or pair[1] not in vocab_dive) and (args.include_oov == False):
+            if (not args.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
                 oov += 1
                 # par nao está no vocab do dive e calculo NÃO deverá incluí-lo
                 continue
@@ -110,18 +110,56 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
-    def build_sentences(self, pattern, pair):
-        sentence1 = pattern.format(pair[0], "[MASK]")
-        sentence2 = pattern.format("[MASK]", pair[1])
-        return [sentence1, sentence2]
+    def build_sentences(self, pattern, pair): # feito, agora falta tratar onde isso eh chamado
+        sentence1 = pattern.format("[MASK]", pair[1])
+        sentence2 = pattern.format(pair[0], "[MASK]")
+        hyponym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
+        hypernym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
+        pattern1_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(sentence1))
+        pattern2_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(sentence2))
+
+        data = []
+        sentences = []
+        # hyponym
+        # if len(hyponym_tokenize) > 1: # sub-word
+        idx_mask = pattern1_tokenize.index(self.tokenizer.mask_token_id)
+        antes = pattern1_tokenize[:idx_mask]
+        depois = pattern1_tokenize[idx_mask + 1:]
+        for i in range(len(hyponym_tokenize)):
+            sentence = hyponym_tokenize.copy()
+            sentence[i] = self.tokenizer.mask_token_id
+            data.append(sentence)
+
+        for i in range(len(data)):
+            row = antes.copy()
+            row.extend(data[i])
+            row.extend(depois)
+            sentences.append(row)
+
+        # hypernym
+        data = []
+        idx_mask = pattern2_tokenize.index(self.tokenizer.mask_token_id)
+        antes = pattern2_tokenize[:idx_mask]
+        depois = pattern2_tokenize[idx_mask + 1:]
+        for i in range(len(hypernym_tokenize)):
+            sentence = hypernym_tokenize.copy()
+            sentence[i] = self.tokenizer.mask_token_id
+            data.append(sentence)
+
+        for i in range(len(data)):
+            row = antes.copy()
+            row.extend(data[i])
+            row.extend(depois)
+            sentences.append(row)
+
+        ids = [hyponym_tokenize, hypernym_tokenize]
+        return sentences, ids
 
 
 def load_eval_file(f_in):
     eval_data = []
     for line in f_in:
-        line = line[:-1]
-        # print line
-        child_pos, parent_pos, is_hyper, rel = line.split('\t')
+        child_pos, parent_pos, is_hyper, rel = line.strip().split('\t')
         child = child_pos.strip()
         parent = parent_pos.strip()
         is_hyper = is_hyper.strip()
@@ -188,8 +226,7 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
 
 
 def main():
-    path_bert = "/home/gabriel/Downloads/bert-base-portuguese-cased"
-    # cloze = ClozeBert(path_bert)
+    print("Iniciando bert")
     cloze = ClozeBert(args.model_name)
 
     model_name = os.path.basename(os.path.normpath(args.model_name))
@@ -202,6 +239,10 @@ def main():
     f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\n")
 
     patterns = ["{} é um tipo de {}", "{} é um {}"]
+    # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
+
+    pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
+             ['banana', 'abacate', 'False', 'random']]
 
     logger.info("Loading vocab dive ...")
     dive_vocab = []
@@ -210,14 +251,23 @@ def main():
             word, count = line.strip().split()
             dive_vocab.append(word)
 
-    for filedataset in os.listdir(args.eval_path):
-        if os.path.isfile(os.path.join(args.eval_path, filedataset)):
-            with open(os.path.join(args.eval_path, filedataset)) as f_in:
-                logger.info("Loading dataset ...")
-                eval_data = load_eval_file(f_in)
-                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data, dive_vocab)
-                output(result, filedataset, model_name, hyper_total, oov_num, f_out)
+    result, hyper_total, oov_num = cloze.sentence_score(patterns, pairs, dive_vocab)
+    logger.info(f"result_size={len(result)}")
+    output(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out)
+
+    # for filedataset in os.listdir(args.eval_path):
+    #     if os.path.isfile(os.path.join(args.eval_path, filedataset)):
+    #         with open(os.path.join(args.eval_path, filedataset)) as f_in:
+    #             logger.info("Loading dataset ...")
+    #             eval_data = load_eval_file(f_in)
+    #             print(f"dataset={filedataset} size={len(eval_data)}")
+    #             result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data[:10], dive_vocab)
+    #             logger.info(f"result_size={len(result)}")
+    #             output(result, filedataset, model_name, hyper_total, oov_num, f_out)
     f_out.close()
+    logger.info("Done")
+    print("Done!")
+    return result, cloze, dive_vocab
 
 
 if __name__ == "__main__":
@@ -229,4 +279,4 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results")
 
     args = parser.parse_args()
-    main()
+    res, model, vocab = main()
