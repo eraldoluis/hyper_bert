@@ -1,11 +1,11 @@
 from transformers import BertConfig, BertForMaskedLM, BertTokenizer, BertModel
 import torch
+import torch.nn.functional as f
 import logging
 import numpy as np
 import argparse
 import random
 import os
-
 logger = logging.getLogger(__name__)
 
 
@@ -15,9 +15,9 @@ class ClozeBert:
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO)
         self.config = BertConfig.from_pretrained(model_name)
-        # self.tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=model_name.endswith("-uncased"))
+        self.tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=model_name.endswith("-uncased"))
 
-        self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
+        # self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
         # self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
 
@@ -153,7 +153,10 @@ class ClozeBert:
                     # segments_tensors = torch.tensor([segments_ids])
                     outputs = self.model(examples)  # , segments_tensors)
                 predict = outputs[0]
-                predict = torch.diagonal(predict[:, idx_mask, idx_all], 0)
+                predict = f.log_softmax(predict, dim=2)
+                predict = predict[torch.arange(len(sentences)), idx_mask, idx_all]
+
+                # predict = torch.diagonal(predict[:, idx_mask, idx_all], 0)
 
                 predict_hypon = predict[:len(idx_h[0])]
                 # print(predict_hypon)
@@ -311,8 +314,8 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
 def main():
     print("Iniciando bert")
     multi = "bert-base-multilingual-cased"
-    cloze = ClozeBert(args.model_name)
-    # cloze = ClozeBert(multi)
+    # cloze = ClozeBert(args.model_name)
+    cloze = ClozeBert(multi)
 
 
     model_name = os.path.basename(os.path.normpath(args.model_name))
@@ -330,6 +333,9 @@ def main():
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
 
+
+    # result, hyper_total, oov_num = cloze.sentence_score(patterns, pairs, [])
+    # return result, cloze, []
     logger.info("Loading vocab dive ...")
     dive_vocab = []
     with open(os.path.join(args.vocab, "vocab.txt"), mode="r", encoding="utf-8") as f_vocab:
@@ -348,7 +354,7 @@ def main():
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
                 print(f"dataset={filedataset} size={len(eval_data)}")
-                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data, dive_vocab)
+                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data[:10], dive_vocab)
                 logger.info(f"result_size={len(result)}")
                 output2(result, filedataset, model_name, hyper_total, oov_num, f_out, patterns)
     f_out.close()
