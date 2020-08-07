@@ -15,7 +15,10 @@ class ClozeBert:
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO)
         self.config = BertConfig.from_pretrained(model_name)
+        # self.tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=model_name.endswith("-uncased"))
+
         self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
+        # self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
 
         # self.model = BertModel.from_pretrained(model_name, config=self.config)
@@ -157,7 +160,7 @@ class ClozeBert:
                 predict_hyper = predict[- len(idx_h[1]):]
                 # print(predict_hyper)
                 # predict for sentences. shape( len(sentences) )
-                print(predict)
+                # print(predict)
                 words_probs_s[" ".join(row)][pattern] = torch.sum(predict).item()
 
         return words_probs_s, hyper_num, oov
@@ -256,6 +259,31 @@ def compute_AP(result_list_method):
     return np.mean(prec_list)
 
 
+def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, patterns):
+    """
+
+    :param dict_pairs: {'a b True hyper': { 'pattern1' : 0.1,
+                                            'pattern2' : 0.2
+                                            }
+                        }
+    """
+    pair_position = {}
+    for pattern in patterns:
+        order_result = sorted(dict_pairs.items(), key=lambda x: x[1][pattern], reverse=True)
+        for position, pair in enumerate(order_result):
+            if pair[0] in pair_position:
+                pair_position[pair[0]].append(position)
+            else:
+                pair_position[pair[0]] = []
+                pair_position[pair[0]].append(position)
+
+    order_final = sorted(pair_position.items(), key=lambda x: np.mean(x[1]), reverse=False)
+    ap = compute_AP(order_final)
+    f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"positional rank"}\t'
+                f'{ap}\t{args.include_oov}\n')
+
+
+
 def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
     """
 
@@ -263,7 +291,6 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
                                             'pattern2' : 0.2
                                             }
                         }
-    :param dataset_name: str
     """
     methods = ["sum", "prod", "max", "min"]
     result_by_par = {}
@@ -283,7 +310,9 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
 
 def main():
     print("Iniciando bert")
+    multi = "bert-base-multilingual-cased"
     cloze = ClozeBert(args.model_name)
+    # cloze = ClozeBert(multi)
 
 
     model_name = os.path.basename(os.path.normpath(args.model_name))
@@ -295,14 +324,11 @@ def main():
     f_out = open(os.path.join(args.output_path, f"result_{model_name}" + ".tsv"), mode="w")
     f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\n")
 
-    patterns = ["{} é um tipo de {}", "{} é um {}"]
+    patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
     # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
 
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
-
-    # cloze.sentence_score(patterns, pairs, [])
-    # return None, cloze, None
 
     logger.info("Loading vocab dive ...")
     dive_vocab = []
@@ -313,7 +339,8 @@ def main():
 
     result, hyper_total, oov_num = cloze.sentence_score(patterns, pairs, dive_vocab)
     logger.info(f"result_size={len(result)}")
-    output(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out)
+    output2(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out, patterns)
+    # return result, cloze, None
 
     for filedataset in os.listdir(args.eval_path):
         if os.path.isfile(os.path.join(args.eval_path, filedataset)):
@@ -321,9 +348,9 @@ def main():
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
                 print(f"dataset={filedataset} size={len(eval_data)}")
-                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data[:10], dive_vocab)
+                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data, dive_vocab)
                 logger.info(f"result_size={len(result)}")
-                output(result, filedataset, model_name, hyper_total, oov_num, f_out)
+                output2(result, filedataset, model_name, hyper_total, oov_num, f_out, patterns)
     f_out.close()
     logger.info("Done")
     print("Done!")
