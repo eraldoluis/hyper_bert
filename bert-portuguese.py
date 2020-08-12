@@ -6,22 +6,26 @@ import numpy as np
 import argparse
 import random
 import os
+
 logger = logging.getLogger(__name__)
 
 
 class ClozeBert:
-    def __init__(self, model_name):
+    def __init__(self, model_name, oov = True):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO)
+        self.include_oov = oov
         self.config = BertConfig.from_pretrained(model_name)
         self.tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=model_name.endswith("-uncased"))
 
         # self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
         # self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
-
-        # self.model = BertModel.from_pretrained(model_name, config=self.config)
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
 
     def most_probabable_words(self, texts):
         words_probs_s = []
@@ -35,7 +39,7 @@ class ClozeBert:
             logger.info("Predicting...")
             self.model.eval()
             with torch.no_grad():
-                examples = torch.tensor([example])
+                examples = torch.tensor([example], device=self.device)
                 outputs, = self.model(examples)
 
             # outputs shape is (batch_example, words, scores).
@@ -69,7 +73,7 @@ class ClozeBert:
             #         hyper_num += 1
             #     continue
 
-            if (not args.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
+            if (not self.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
                 oov += 1
                 # par nao está no vocab do dive e calculo NÃO deverá incluí-lo
                 continue
@@ -98,7 +102,7 @@ class ClozeBert:
                     logger.info("Predicting...")
                     self.model.eval()
                     with torch.no_grad():
-                        examples = torch.tensor([tokenized_text])
+                        examples = torch.tensor([tokenized_text], device=self.device)
                         # segments_tensors = torch.tensor([segments_ids])
                         outputs = self.model(examples)  # , segments_tensors)
 
@@ -130,7 +134,7 @@ class ClozeBert:
             #         hyper_num += 1
             #     continue
 
-            if (not args.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
+            if (not self.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
                 oov += 1
                 # par nao está no vocab do dive e calculo NÃO deverá incluí-lo
                 continue
@@ -149,12 +153,12 @@ class ClozeBert:
                 logger.info("Predicting...")
                 self.model.eval()
                 with torch.no_grad():
-                    examples = torch.tensor(sentences)
+                    examples = torch.tensor(sentences, device=self.device)
                     # segments_tensors = torch.tensor([segments_ids])
                     outputs = self.model(examples)  # , segments_tensors)
                 predict = outputs[0]
                 predict = f.log_softmax(predict, dim=2)
-                predict = predict[torch.arange(len(sentences)), idx_mask, idx_all]
+                predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
 
                 # predict = torch.diagonal(predict[:, idx_mask, idx_all], 0)
 
@@ -168,7 +172,7 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
-    def build_sentences(self, pattern, pair): # feito, agora falta tratar onde isso eh chamado
+    def build_sentences(self, pattern, pair):  # feito, agora falta tratar onde isso eh chamado
         sentence1 = pattern.format("[MASK]", pair[1])
         sentence2 = pattern.format(pair[0], "[MASK]")
         logger.info("Tokenizing...")
@@ -262,7 +266,7 @@ def compute_AP(result_list_method):
     return np.mean(prec_list)
 
 
-def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, patterns):
+def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, patterns, include_oov = True):
     """
 
     :param dict_pairs: {'a b True hyper': { 'pattern1' : 0.1,
@@ -283,11 +287,10 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
     order_final = sorted(pair_position.items(), key=lambda x: np.mean(x[1]), reverse=False)
     ap = compute_AP(order_final)
     f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"positional rank"}\t'
-                f'{ap}\t{args.include_oov}\n')
+                f'{ap}\t{include_oov}\n')
 
 
-
-def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
+def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, include_oov=True):
     """
 
     :param dict_pairs: {'a b True hyper': { 'pattern1' : 0.1,
@@ -308,16 +311,22 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out):
         ap = compute_AP(order_result)
         # model dataset N oov hyper_num method AP include_oov
         f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{method}\t'
-                    f'{ap}\t{args.include_oov}\n')
+                    f'{ap}\t{include_oov}\n')
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--model_name", type=str, help="path to bert model", required=True)
+    parser.add_argument("-e", "--eval_path", type=str, help="path to datasets", required=True)
+    parser.add_argument("-o", "--output_path", type=str, help="path to dir output", required=False)
+    parser.add_argument("-v", "--vocab", type=str, help="dir of vocab", required=False)
+    parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results")
+
+    args = parser.parse_args()
     print("Iniciando bert")
-    multi = "bert-base-multilingual-cased"
-    # cloze = ClozeBert(args.model_name)
-    cloze = ClozeBert(multi)
-
-
+    cloze_model = ClozeBert(args.model_name)
+    if torch.cuda.is_available():
+        cloze_model.cuda()
     model_name = os.path.basename(os.path.normpath(args.model_name))
     try:
         os.mkdir(args.output_path)
@@ -333,9 +342,6 @@ def main():
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
 
-
-    # result, hyper_total, oov_num = cloze.sentence_score(patterns, pairs, [])
-    # return result, cloze, []
     logger.info("Loading vocab dive ...")
     dive_vocab = []
     with open(os.path.join(args.vocab, "vocab.txt"), mode="r", encoding="utf-8") as f_vocab:
@@ -343,9 +349,10 @@ def main():
             word, count = line.strip().split()
             dive_vocab.append(word)
 
-    result, hyper_total, oov_num = cloze.sentence_score(patterns, pairs, dive_vocab)
-    logger.info(f"result_size={len(result)}")
-    output2(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out, patterns)
+    # test
+    # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs, dive_vocab)
+    # logger.info(f"result_size={len(result)}")
+    # output2(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out, patterns)
     # return result, cloze, None
 
     for filedataset in os.listdir(args.eval_path):
@@ -354,22 +361,13 @@ def main():
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
                 print(f"dataset={filedataset} size={len(eval_data)}")
-                result, hyper_total, oov_num = cloze.sentence_score(patterns, eval_data[:10], dive_vocab)
+                result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
                 logger.info(f"result_size={len(result)}")
-                output2(result, filedataset, model_name, hyper_total, oov_num, f_out, patterns)
+                output2(result, filedataset, model_name, hyper_total, oov_num, f_out, patterns, args.include_oov)
     f_out.close()
     logger.info("Done")
     print("Done!")
-    return result, cloze, dive_vocab
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model_name", type=str, help="path to bert model", required=True)
-    parser.add_argument("-e", "--eval_path", type=str, help="path to datasets", required=True)
-    parser.add_argument("-o", "--output_path", type=str, help="path to dir output", required=True)
-    parser.add_argument("-v", "--vocab", type=str, help="dir of vocab", required=True)
-    parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results")
-
-    args = parser.parse_args()
-    res, model, vocab = main()
+    main()
