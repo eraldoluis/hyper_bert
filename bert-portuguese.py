@@ -16,16 +16,20 @@ class ClozeBert:
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO)
         self.include_oov = oov
+
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
         self.config = BertConfig.from_pretrained(model_name)
         self.tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=model_name.endswith("-uncased"))
 
         # self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
         # self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
-        if torch.cuda.is_available():
-            self.device = torch.device('cuda')
-        else:
-            self.device = torch.device('cpu')
+        self.model.to(self.device)
+
 
     def most_probabable_words(self, texts):
         words_probs_s = []
@@ -325,8 +329,6 @@ def main():
     args = parser.parse_args()
     print("Iniciando bert")
     cloze_model = ClozeBert(args.model_name)
-    if torch.cuda.is_available():
-        cloze_model.cuda()
     model_name = os.path.basename(os.path.normpath(args.model_name))
     try:
         os.mkdir(args.output_path)
