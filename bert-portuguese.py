@@ -290,8 +290,13 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
 
     order_final = sorted(pair_position.items(), key=lambda x: np.mean(x[1]), reverse=False)
     ap = compute_AP(order_final)
-    f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"positional rank"}\t'
+    f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"mean positional rank"}\t'
                 f'{ap}\t{include_oov}\n')
+
+    order_final2 = sorted(pair_position.items(), key=lambda x: min(x[1]), reverse=False)
+    ap2 = compute_AP(order_final2)
+    f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"min positional rank"}\t'
+                f'{ap2}\t{include_oov}\n')
 
 
 def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, include_oov=True):
@@ -329,13 +334,12 @@ def main():
     args = parser.parse_args()
     print("Iniciando bert")
     cloze_model = ClozeBert(args.model_name)
-    model_name = os.path.basename(os.path.normpath(args.model_name))
     try:
         os.mkdir(args.output_path)
     except:
         pass
 
-    f_out = open(os.path.join(args.output_path, f"result_{model_name}" + ".tsv"), mode="w")
+    f_out = open(os.path.join(args.output_path, f"result_{args.model_name.replace('/', '-')}" + ".tsv"), mode="w")
     f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\n")
 
     patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
@@ -365,7 +369,7 @@ def main():
                 print(f"dataset={filedataset} size={len(eval_data)}")
                 result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
                 logger.info(f"result_size={len(result)}")
-                output2(result, filedataset, model_name, hyper_total, oov_num, f_out, patterns, args.include_oov)
+                output2(result, filedataset, args.model_name, hyper_total, oov_num, f_out, patterns, args.include_oov)
     f_out.close()
     logger.info("Done")
     print("Done!")
