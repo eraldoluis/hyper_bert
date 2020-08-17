@@ -168,8 +168,10 @@ class ClozeBert:
                 # predict = torch.diagonal(predict[:, idx_mask, idx_all], 0)
 
                 predict_hypon = predict[:len(idx_h[0])]
+                predict_hypon.cpu()
                 # print(predict_hypon)
                 predict_hyper = predict[- len(idx_h[1]):]
+                predict_hyper.cpu()
                 # print(predict_hyper)
                 # predict for sentences. shape( len(sentences) )
                 # print(predict)
@@ -384,4 +386,4 @@ def main():
 
 
 if __name__ == "__main__":
-    t = main()
+    main()
