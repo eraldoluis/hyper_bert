@@ -168,16 +168,14 @@ class ClozeBert:
                 # predict = torch.diagonal(predict[:, idx_mask, idx_all], 0)
 
                 predict_hypon = predict[:len(idx_h[0])]
-                predict_hypon.cpu()
                 # print(predict_hypon)
                 predict_hyper = predict[- len(idx_h[1]):]
-                predict_hyper.cpu()
                 # print(predict_hyper)
                 # predict for sentences. shape( len(sentences) )
                 # print(predict)
                 words_probs_s[" ".join(row)][pattern] = []
-                words_probs_s[" ".join(row)][pattern].append(predict_hypon.numpy().tolist())
-                words_probs_s[" ".join(row)][pattern].append(predict_hyper.numpy().tolist())
+                words_probs_s[" ".join(row)][pattern].append(predict_hypon.cpu().numpy().tolist())
+                words_probs_s[" ".join(row)][pattern].append(predict_hyper.cpu().numpy().tolist())
                 # words_probs_s[" ".join(row)][pattern] = torch.sum(predict).item()
 
         return words_probs_s, hyper_num, oov
