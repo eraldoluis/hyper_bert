@@ -5,8 +5,9 @@ import logging
 import numpy as np
 import argparse
 import random
+import json
 import os
-
+random.seed(61)
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +27,7 @@ class ClozeBert:
         self.tokenizer = BertTokenizer.from_pretrained(model_name, do_lower_case=model_name.endswith("-uncased"))
 
         # self.tokenizer = BertTokenizer.from_pretrained(model_name + "/vocab.txt", do_lower_case=False)
-        # self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
+        # self.models = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model.to(self.device)
 
@@ -172,7 +173,10 @@ class ClozeBert:
                 # print(predict_hyper)
                 # predict for sentences. shape( len(sentences) )
                 # print(predict)
-                words_probs_s[" ".join(row)][pattern] = torch.sum(predict).item()
+                words_probs_s[" ".join(row)][pattern] = []
+                words_probs_s[" ".join(row)][pattern].append(predict_hypon.numpy().tolist())
+                words_probs_s[" ".join(row)][pattern].append(predict_hyper.numpy().tolist())
+                # words_probs_s[" ".join(row)][pattern] = torch.sum(predict).item()
 
         return words_probs_s, hyper_num, oov
 
@@ -269,6 +273,15 @@ def compute_AP(result_list_method):
 
     return np.mean(prec_list)
 
+def save_bert_file(dict, output, dataset_name, model_name, hyper_num, oov_num, f_info_out, include_oov = True):
+    logger.info("save info...")
+    f_info_out.write(f'{model_name}\t{dataset_name}\t{len(dict)}\t{oov_num}\t{hyper_num}\t{include_oov}\n')
+    logger.info("save json...")
+    dname = os.path.splitext(dataset_name)[0]
+    fjson = json.dumps(dict, ensure_ascii=False)
+    f = open(os.path.join(output, model_name.replace("/","-"), dname + ".json"), mode="w", encoding="utf-8")
+    f.write(fjson)
+    f.close()
 
 def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, patterns, include_oov = True):
     """
@@ -318,29 +331,29 @@ def output(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, incl
     for method in methods:
         order_result = sorted(result_by_par.items(), key=lambda x: x[1][method], reverse=False)
         ap = compute_AP(order_result)
-        # model dataset N oov hyper_num method AP include_oov
+        # models dataset N oov hyper_num method AP include_oov
         f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{method}\t'
                     f'{ap}\t{include_oov}\n')
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model_name", type=str, help="path to bert model", required=True)
+    parser.add_argument("-m", "--model_name", type=str, help="path to bert models", required=True)
     parser.add_argument("-e", "--eval_path", type=str, help="path to datasets", required=True)
     parser.add_argument("-o", "--output_path", type=str, help="path to dir output", required=False)
     parser.add_argument("-v", "--vocab", type=str, help="dir of vocab", required=False)
     parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results")
 
     args = parser.parse_args()
-    print("Iniciando bert")
+    print("Iniciando bert...")
     cloze_model = ClozeBert(args.model_name)
     try:
-        os.mkdir(args.output_path)
+        os.mkdir(os.path.join(args.output_path, args.model_name.replace("/", "-")))
     except:
         pass
 
-    f_out = open(os.path.join(args.output_path, f"result_{args.model_name.replace('/', '-')}" + ".tsv"), mode="w")
-    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\n")
+    f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
+    f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
     patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
     # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
@@ -355,12 +368,6 @@ def main():
             word, count = line.strip().split()
             dive_vocab.append(word)
 
-    # test
-    # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs, dive_vocab)
-    # logger.info(f"result_size={len(result)}")
-    # output2(result, 'testestestestestes', model_name, hyper_total, oov_num, f_out, patterns)
-    # return result, cloze, None
-
     for filedataset in os.listdir(args.eval_path):
         if os.path.isfile(os.path.join(args.eval_path, filedataset)):
             with open(os.path.join(args.eval_path, filedataset)) as f_in:
@@ -368,12 +375,13 @@ def main():
                 eval_data = load_eval_file(f_in)
                 print(f"dataset={filedataset} size={len(eval_data)}")
                 result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
+                save_bert_file(result, args.output_path, filedataset, args.model_name, hyper_total, oov_num, f_out, args.include_oov)
                 logger.info(f"result_size={len(result)}")
-                output2(result, filedataset, args.model_name, hyper_total, oov_num, f_out, patterns, args.include_oov)
+                # output2(result, filedataset, args.model_name, hyper_total, oov_num, f_out, patterns, args.include_oov)
     f_out.close()
     logger.info("Done")
     print("Done!")
 
 
 if __name__ == "__main__":
-    main()
+    t = main()
