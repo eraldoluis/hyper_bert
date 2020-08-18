@@ -7,7 +7,7 @@ import argparse
 import random
 import json
 import os
-random.seed(61)
+
 logger = logging.getLogger(__name__)
 
 
@@ -239,7 +239,7 @@ def load_eval_file(f_in):
         is_hyper = is_hyper.strip()
         rel = rel.strip()
         eval_data.append([child, parent, is_hyper, rel])
-    random.shuffle(eval_data)
+    #random.shuffle(eval_data)
     return eval_data
 
 
