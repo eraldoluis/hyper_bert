@@ -1,8 +1,14 @@
 import numpy as np
 import argparse
+import logging
+import pandas as pd
 import random
 import json
 import os
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+                            datefmt='%m/%d/%Y %H:%M:%S',
+                            level=logging.INFO)
 
 def compute_AP(result_list_method):
     """
@@ -43,6 +49,7 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
                                             }
                         }
     """
+    logger.info("Calculando score...")
     pair_position = {}
     for pattern in patterns:
         order_result = sorted(dict_pairs.items(), key=lambda x: x[1][pattern], reverse=True)
@@ -65,6 +72,7 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
 
 
 def main():
+    logger.info("Iniciando...")
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_bert", type=str, help="path to json directory", required=True)
     parser.add_argument("-o", "--output_path", type=str, help="path to dir output", required=True)
@@ -77,18 +85,28 @@ def main():
     #             f'{ap}\t{include_oov}\n')
     try:
         os.mkdir(os.path.join(args.output_path, os.path.basename(args.input_bert)))
-    except:
-        pass
+    except ValueError:
+        raise ValueError
+
     f_out = open(os.path.join(args.output_path, os.path.basename(args.input_bert), "result.tsv"), mode="a")
     f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\n")
 
+    logger.info("Carregando info.tsv")
+    df_info = pd.read_csv(os.path.join(args.input_bert, "info.tsv"), delimiter="\t")
     for filename in os.listdir(args.input_bert):
         if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json":
-            with open(os.path.join(args.input_bert, filename)) as f_in:
-                result = json.load(f_in)
-                output2(result, filename, os.path.basename(args.input_bert), 1000, 1000, f_out, patterns, True)
+            dataset_name = os.path.splitext(filename)[0] + ".tsv"
+            n_size = df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)]['N'].squeeze()
+            oov_num = df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)]['oov'].squeeze()
+            hyper_num = df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)]['hyper_num'].squeeze()
+            include_oov = df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)]['include_oov'].squeeze()
 
-    pass
+            with open(os.path.join(args.input_bert, filename)) as f_in:
+                logger.info(f"Carregando json {filename}")
+                result = json.load(f_in)
+                output2(result, dataset_name, os.path.basename(args.input_bert), hyper_num, oov_num, f_out, patterns, include_oov)
+    logger.info("Done!")
+
 
 
 if __name__ == '__main__':

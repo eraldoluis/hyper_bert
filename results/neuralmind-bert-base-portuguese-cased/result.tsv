@@ -1,0 +1,7 @@
+model	dataset	N	oov	hyper_num	method	AP	include_oov
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	mean positional rank	0.6678219583966468	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	min positional rank	0.6691874156474886	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	mean positional rank	0.5360757222118389	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	min positional rank	0.5357316817506205	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	mean positional rank	0.07150780581360476	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	min positional rank	0.07218511473830275	True

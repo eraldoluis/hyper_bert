@@ -1,4 +1,0 @@
-model	dataset	N	oov	hyper_num	method	AP	include_oov
-bert-base-portuguese-cased	ontoPT-validation.tsv	7	23	3	sum	0.5873015873015873	False
-bert-base-portuguese-cased	ontoPT-validation.tsv	7	23	3	prod	0.8095238095238094	False
-bert-base-portuguese-cased	ontoPT-validation.tsv	7	23	3	max	0.6428571428571429	False

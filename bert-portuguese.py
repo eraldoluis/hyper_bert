@@ -375,7 +375,7 @@ def main():
                 eval_data = load_eval_file(f_in)
                 print(f"dataset={filedataset} size={len(eval_data)}")
                 result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
-                save_bert_file(result, args.output_path, filedataset, args.model_name, hyper_total, oov_num, f_out, args.include_oov)
+                save_bert_file(result, args.output_path, filedataset, args.model_name.replace('/', '-'), hyper_total, oov_num, f_out, args.include_oov)
                 logger.info(f"result_size={len(result)}")
                 # output2(result, filedataset, args.model_name, hyper_total, oov_num, f_out, patterns, args.include_oov)
     f_out.close()
