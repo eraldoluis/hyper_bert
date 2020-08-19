@@ -105,6 +105,7 @@ def main():
                 logger.info(f"Carregando json {filename}")
                 result = json.load(f_in)
                 output2(result, dataset_name, os.path.basename(args.input_bert), hyper_num, oov_num, f_out, patterns, include_oov)
+    f_out.close()
     logger.info("Done!")
 
 
