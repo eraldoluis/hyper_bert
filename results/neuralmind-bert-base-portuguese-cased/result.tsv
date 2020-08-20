@@ -1,7 +1,25 @@
 model	dataset	N	oov	hyper_num	method	AP	include_oov
-neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	mean positional rank	0.6678219583966468	True
-neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	min positional rank	0.6691874156474886	True
-neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	mean positional rank	0.5360757222118389	True
-neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	min positional rank	0.5357316817506205	True
-neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	mean positional rank	0.07150780581360476	True
-neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	min positional rank	0.07218511473830275	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	mean_subword mean_positional_rank	0.6053622006102757	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	mean_subword min_positional_rank	0.6189906896306523	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	mean_subword max_pattern	0.624767326368023	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	mean_subword mean_pattern	0.6072665192185089	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	all_subword mean_positional_rank	0.5268505496307841	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	all_subword min_positional_rank	0.5242281869018084	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	all_subword max_pattern	0.522330602815351	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	4646	0	2323	all_subword mean_pattern	0.5262303627371151	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	mean_subword mean_positional_rank	0.5325035372623761	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	mean_subword min_positional_rank	0.5400522226979043	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	mean_subword max_pattern	0.5401078688812369	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	mean_subword mean_pattern	0.533174110620698	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	all_subword mean_positional_rank	0.508350879862085	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	all_subword min_positional_rank	0.5076516629987459	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	all_subword max_pattern	0.5065300052188578	True
+neuralmind-bert-base-portuguese-cased	OntoPT.tsv	944452	0	472226	all_subword mean_pattern	0.508199346511227	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	mean_subword mean_positional_rank	0.0878826547119664	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	mean_subword min_positional_rank	0.09600030870968976	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	mean_subword max_pattern	0.09679609029220206	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	mean_subword mean_pattern	0.0882877652265779	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	all_subword mean_positional_rank	0.11273625690328246	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	all_subword min_positional_rank	0.11066013366356398	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	all_subword max_pattern	0.11296403710265902	True
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-allrelation.tsv	30474	0	2323	all_subword mean_pattern	0.11292097536555824	True
