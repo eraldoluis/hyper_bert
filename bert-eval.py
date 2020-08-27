@@ -1,4 +1,5 @@
 import operator
+import sys
 
 import numpy as np
 import argparse
@@ -12,6 +13,14 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
+
+def load_eval_file(f_in):
+    eval_data = []
+    for line in f_in:
+        line = line[:-1]
+        eval_data.append(line.replace("\t", " "))
+    return eval_data
+
 
 
 def compute_AP(result_list_method):
@@ -45,8 +54,18 @@ def compute_AP(result_list_method):
     return np.mean(prec_list)
 
 
-def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, patterns, include_oov=True):
+def infos_eval(dict_result):
+    hyper_num = 0
+    for k, v in dict_result.items():
+        row = k.strip().split()
+        if row[3] == "hyper":
+            hyper_num += 1
+    return hyper_num
 
+def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, include_oov=True):
+
+    hyper_num = infos_eval(dict_pairs)
+    oov_num = 0
     logger.info("Calculando score...")
     method = ["mean_subword", "all_subword"]
     sub_method = ["mean_positional_rank", "min_positional_rank", "max_pattern", "mean_pattern"]
@@ -98,16 +117,10 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
                     # faz a media dos rankings
                     order_final = sorted(pair_position.items(), key=lambda x: np.mean(x[1]), reverse=False)
                     ap = compute_AP(order_final)
-                    f_out.write(
-                        f'{model_name}\t{dataset_name}\t{len(order_final)}\t{oov_num}\t{hyper_num}\t{m} {s_m}\t'
-                        f'{ap}\t{include_oov}\n')
                 elif s_m == "min_positional_rank":
                     # usa o menor ranking para cada par
                     order_final = sorted(pair_position.items(), key=lambda x: min(x[1]), reverse=False)
                     ap = compute_AP(order_final)
-                    f_out.write(
-                        f'{model_name}\t{dataset_name}\t{len(order_final)}\t{oov_num}\t{hyper_num}\t{m} {s_m}\t'
-                        f'{ap}\t{include_oov}\n')
                 else:
                     raise ValueError
             elif s_m == "max_pattern":
@@ -117,9 +130,6 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
                 order_final = sorted(max_pattern.items(), key=lambda x: x[1], reverse=True)
 
                 ap = compute_AP(order_final)
-                f_out.write(
-                    f'{model_name}\t{dataset_name}\t{len(order_final)}\t{oov_num}\t{hyper_num}\t{m} {s_m}\t'
-                    f'{ap}\t{include_oov}\n')
             elif s_m == "mean_pattern":
                 mean_pattern = {}
                 for data, patterns in new_pairs.items():
@@ -130,18 +140,40 @@ def output2(dict_pairs, dataset_name, model_name, hyper_num, oov_num, f_out, pat
 
                 order_final = sorted(mean_pattern.items(), key=lambda x: x[1], reverse=True)
                 ap = compute_AP(order_final)
-                f_out.write(
-                    f'{model_name}\t{dataset_name}\t{len(order_final)}\t{oov_num}\t{hyper_num}\t{m} {s_m}\t'
-                    f'{ap}\t{include_oov}\n')
             else:
                 raise ValueError
+
+            f_out.write(
+                f'{model_name}\t{dataset_name}\t{len(order_final)}\t{oov_num}\t{hyper_num}\t{m} {s_m}\t'
+                f'{ap}\t{include_oov}\t{corpus}\n')
+
+
+def read_vocab(path_vocab):
+    vocab = []
+    with open(path_vocab, mode="r", encoding="utf-8") as f:
+        for line in f:
+            w, c = line.strip().split()
+            vocab.append(w)
+    corpus = path_vocab.split("/")[-2]
+    return vocab, corpus
+
+
+def filter_oov(data, vocab):
+    new_data = {}
+    for k, v in data.items():
+        row = k.split()
+        if row[0] in vocab and row[1] in vocab:
+            new_data[k] = v
+    return  new_data
 
 
 def main():
     logger.info("Iniciando...")
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_bert", type=str, help="path to json directory", required=True)
-    parser.add_argument("-o", "--output_path", type=str, help="path to dir output", required=True)
+    parser.add_argument("-o", "--output_path", type=str, help="dir output", required=True)
+    parser.add_argument("-e", "--eval_path", type=str, help="dir datasets", required=True)
+    parser.add_argument("--vocabs", type=str, help="dir vocabs", required=False)
     args = parser.parse_args()
 
     patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
@@ -154,34 +186,52 @@ def main():
         raise ValueError
 
     f_out = open(os.path.join(args.output_path, os.path.basename(args.input_bert), "result.tsv"), mode="a")
-    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\n")
+    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\n")
 
-    logger.info("Carregando info.tsv")
-    df_info = pd.read_csv(os.path.join(args.input_bert, "info.tsv"), delimiter="\t")
+    logger.info("Carregando datasets")
+    dataset_token1 = ""
+    for filename in os.listdir(args.eval_path):
+        with open(os.path.join(args.eval_path, filename), mode="r", encoding="utf-8") as f:
+            data = load_eval_file(f)
+            dataset_token1 = filename[:-12]
+
     for filename in os.listdir(args.input_bert):
-        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json":
+        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and filename[:-5] == dataset_token1:
             dataset_name = os.path.splitext(filename)[0] + ".tsv"
-            n_size = \
-            df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)][
-                'N'].squeeze()
-            oov_num = \
-            df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)][
-                'oov'].squeeze()
-            hyper_num = \
-            df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)][
-                'hyper_num'].squeeze()
-            include_oov = \
-            df_info[(df_info['model'] == os.path.basename(args.input_bert)) & (df_info['dataset'] == dataset_name)][
-                'include_oov'].squeeze()
 
             with open(os.path.join(args.input_bert, filename)) as f_in:
                 logger.info(f"Carregando json {filename}")
                 result = json.load(f_in)
-                output2(result, dataset_name, os.path.basename(args.input_bert), hyper_num, oov_num, f_out, patterns,
-                        include_oov)
+                new_result = {}
+                # filtrando conforme o novo dataset de subtoken de tamanho 1
+                for i in data:
+                    if i in result:
+                        new_result[i] = result[i]
+
+                #filtrando oov conforme vocab dive
+                for v_p in os.listdir(args.vocabs):
+                    vocab, corpus_name = read_vocab(os.path.join(args.vocabs, v_p, "vocab.txt"))
+                    dict_result = filter_oov(new_result, vocab)
+                    output2(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
+                            args.vocabs is None)
+                output2(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
+                    not args.vocabs is None)
     f_out.close()
     logger.info("Done!")
 
 
 if __name__ == '__main__':
     main()
+
+'''
+--vocabs
+/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia15M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia15M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
+--vocabs
+/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia30M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia30M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
+--vocabs
+/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia60M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia60M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
+--vocabs
+/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia120M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia120M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
+--vocabs
+/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia240M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia240M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
+'''
