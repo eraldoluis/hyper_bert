@@ -387,12 +387,12 @@ def main():
                      ['acidente', 'acontecimento', 'True', 'hyper'],
                      ['pessoa', 'discurso', 'False', 'random']]
 
-    logger.info("Loading vocab dive ...")
-    dive_vocab = []
-    with open(os.path.join(args.vocab, "vocab.txt"), mode="r", encoding="utf-8") as f_vocab:
-        for line in f_vocab:
-            word, count = line.strip().split()
-            dive_vocab.append(word)
+    # logger.info("Loading vocab dive ...")
+    # dive_vocab = []
+    # with open(os.path.join(args.vocab, "vocab.txt"), mode="r", encoding="utf-8") as f_vocab:
+    #     for line in f_vocab:
+    #         word, count = line.strip().split()
+    #         dive_vocab.append(word)
 
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
