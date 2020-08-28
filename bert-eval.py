@@ -62,7 +62,7 @@ def infos_eval(dict_result):
             hyper_num += 1
     return hyper_num
 
-def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, include_oov=True):
+def output2(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, include_oov=True):
 
     hyper_num = infos_eval(dict_pairs)
     oov_num = 0
@@ -79,11 +79,11 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                                    }
             """
             new_pairs = {}
-            for data, info in dict_pairs.items():
+            for data, pattern in dict_pairs.items():
                 new_pairs[data] = {}
-                for pattern_name in patterns:
+                for pattern_name in patterns_list:
                     values = dict_pairs[data][pattern_name]
-                    new_pairs[data][pattern_name] = sum(list(sum(values, []))) / dict_pairs[data]['z_score'][pattern_name]
+                    new_pairs[data][pattern_name] = (sum(list(sum(values, [])))) / dict_pairs[data]['z_score'][pattern_name]
 
         elif m == "mean_subword":
             """
@@ -94,11 +94,11 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                                    }
             """
             new_pairs = {}
-            for data, info in dict_pairs.items():
+            for data, pattern in dict_pairs.items():
                 new_pairs[data] = {}
-                for pattern_name in patterns:
+                for pattern_name in patterns_list:
                     values = dict_pairs[data][pattern_name]
-                    new_pairs[data][pattern_name] = np.mean(values[0]) + np.mean(values[1]) / dict_pairs[data]['z_score'][pattern_name]
+                    new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1])) / dict_pairs[data]['z_score'][pattern_name]
 
         else:
             raise ValueError
@@ -107,15 +107,15 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
             if s_m == "mean_positional_rank" or s_m == "min_positional_rank":
                 # faz um rank para cada pattern
                 pair_position = {}
-                for info in patterns:
-                    order_result = sorted(new_pairs.items(), key=lambda x: x[1][info], reverse=True)
+                for pattern_name in patterns_list:
+                    order_result = sorted(new_pairs.items(), key=lambda x: x[1][pattern_name], reverse=True)
                     for position, pair in enumerate(order_result):
                         if pair[0] in pair_position:
                             pair_position[pair[0]].append(position)
                         else:
                             pair_position[pair[0]] = []
                             pair_position[pair[0]].append(position)
-                if s_m ==  "mean_positional_rank":
+                if s_m == "mean_positional_rank":
                     # faz a media dos rankings
                     order_final = sorted(pair_position.items(), key=lambda x: np.mean(x[1]), reverse=False)
                     ap = compute_AP(order_final)
@@ -127,8 +127,8 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                     raise ValueError
             elif s_m == "max_pattern":
                 max_pattern = {}
-                for data, info in new_pairs.items():
-                    max_pattern[data] = max(info.items(), key=operator.itemgetter(1))[1]
+                for data, pattern_name in new_pairs.items():
+                    max_pattern[data] = max(pattern_name.items(), key=operator.itemgetter(1))[1]
                 order_final = sorted(max_pattern.items(), key=lambda x: x[1], reverse=True)
 
                 ap = compute_AP(order_final)
@@ -136,7 +136,7 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                 mean_pattern = {}
                 for data, patterns in new_pairs.items():
                     mean = []
-                    for info, value in patterns.items():
+                    for pattern_name, value in patterns.items():
                         mean.append(value)
                     mean_pattern[data] = np.mean(mean)
 
@@ -198,7 +198,8 @@ def main():
             dataset_token1 = filename
 
     for filename in os.listdir(args.input_bert):
-        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and filename[:-5] == dataset_token1[:-12]:
+        logger.info(f"file={filename}\t{dataset_token1}")
+        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] == os.path.splitext(dataset_token1)[0]:
             dataset_name = os.path.splitext(filename)[0] + ".tsv"
 
             with open(os.path.join(args.input_bert, filename)) as f_in:
@@ -214,6 +215,7 @@ def main():
                 for v_p in os.listdir(args.vocabs):
                     vocab, corpus_name = read_vocab(os.path.join(args.vocabs, v_p, "vocab.txt"))
                     dict_result = filter_oov(new_result, vocab)
+                    logger.info("filtrando datasets")
                     output2(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
                             args.vocabs is None)
                 output2(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
@@ -224,16 +226,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-'''
---vocabs
-/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia15M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia15M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
---vocabs
-/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia30M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia30M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
---vocabs
-/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia60M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia60M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
---vocabs
-/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia120M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia120M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
---vocabs
-/home/gabrielescobar/Documentos/dive-pytorch/model/wikipedia240M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_runX/wikipedia240M_W10_neg15_e15_lr1e-03_eps1e-08_emb100_batch128_run0/vocab.txt
-'''
