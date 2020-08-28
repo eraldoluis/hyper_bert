@@ -30,6 +30,7 @@ class ClozeBert:
         # self.models = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model.to(self.device)
+        self.z_score = {}
 
 
     def most_probabable_words(self, texts):
@@ -207,7 +208,8 @@ class ClozeBert:
                 hyper_num += 1
 
             for pattern in patterns:
-                z_score = self.z_build_sentences(pattern, tokens_dataset)
+                if not pattern in self.z_score:
+                    self.z_score[pattern] = self.z_build_sentences(pattern, tokens_dataset).item()
                 sentences, idx_h, idx_mask = self.build_sentences(pattern, pair)
                 idx_all = idx_h[0].copy()
                 idx_all.extend(idx_h[1])
@@ -230,11 +232,9 @@ class ClozeBert:
                 # print(predict_hyper)
                 # predict for sentences. shape( len(sentences) )
                 # print(predict)
-                if "z_score" not in words_probs_s[" ".join(row)]:
-                    words_probs_s[" ".join(row)]["z_score"] = {}
-                    words_probs_s[" ".join(row)]["z_score"][pattern] = z_score.item()
-                else:
-                    words_probs_s[" ".join(row)]["z_score"][pattern] = z_score.item()
+
+                words_probs_s[" ".join(row)]["z_score"] = self.z_score.copy()
+
                 words_probs_s[" ".join(row)][pattern] = []
                 words_probs_s[" ".join(row)][pattern].append(predict_hypon.cpu().numpy().tolist())
                 words_probs_s[" ".join(row)][pattern].append(predict_hyper.cpu().numpy().tolist())
