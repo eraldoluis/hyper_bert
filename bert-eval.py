@@ -79,10 +79,11 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                                    }
             """
             new_pairs = {}
-            for data, pattern in dict_pairs.items():
+            for data, info in dict_pairs.items():
                 new_pairs[data] = {}
-                for pattern_name, values in pattern.items():
-                    new_pairs[data][pattern_name] = sum(list(sum(values, [])))
+                for pattern_name in patterns:
+                    values = dict_pairs[data][pattern_name]
+                    new_pairs[data][pattern_name] = sum(list(sum(values, []))) / dict_pairs[data]['z_score'][pattern_name]
 
         elif m == "mean_subword":
             """
@@ -93,10 +94,11 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                                    }
             """
             new_pairs = {}
-            for data, pattern in dict_pairs.items():
+            for data, info in dict_pairs.items():
                 new_pairs[data] = {}
-                for pattern_name, values in pattern.items():
-                    new_pairs[data][pattern_name] = np.mean(values[0]) + np.mean(values[1])
+                for pattern_name in patterns:
+                    values = dict_pairs[data][pattern_name]
+                    new_pairs[data][pattern_name] = np.mean(values[0]) + np.mean(values[1]) / dict_pairs[data]['z_score'][pattern_name]
 
         else:
             raise ValueError
@@ -105,8 +107,8 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
             if s_m == "mean_positional_rank" or s_m == "min_positional_rank":
                 # faz um rank para cada pattern
                 pair_position = {}
-                for pattern in patterns:
-                    order_result = sorted(new_pairs.items(), key=lambda x: x[1][pattern], reverse=True)
+                for info in patterns:
+                    order_result = sorted(new_pairs.items(), key=lambda x: x[1][info], reverse=True)
                     for position, pair in enumerate(order_result):
                         if pair[0] in pair_position:
                             pair_position[pair[0]].append(position)
@@ -125,8 +127,8 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                     raise ValueError
             elif s_m == "max_pattern":
                 max_pattern = {}
-                for data, pattern in new_pairs.items():
-                    max_pattern[data] = max(pattern.items(), key=operator.itemgetter(1))[1]
+                for data, info in new_pairs.items():
+                    max_pattern[data] = max(info.items(), key=operator.itemgetter(1))[1]
                 order_final = sorted(max_pattern.items(), key=lambda x: x[1], reverse=True)
 
                 ap = compute_AP(order_final)
@@ -134,7 +136,7 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns, corpus, inclu
                 mean_pattern = {}
                 for data, patterns in new_pairs.items():
                     mean = []
-                    for pattern, value in patterns.items():
+                    for info, value in patterns.items():
                         mean.append(value)
                     mean_pattern[data] = np.mean(mean)
 
@@ -193,10 +195,10 @@ def main():
     for filename in os.listdir(args.eval_path):
         with open(os.path.join(args.eval_path, filename), mode="r", encoding="utf-8") as f:
             data = load_eval_file(f)
-            dataset_token1 = filename[:-12]
+            dataset_token1 = filename
 
     for filename in os.listdir(args.input_bert):
-        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and filename[:-5] == dataset_token1:
+        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and filename[:-5] == dataset_token1[:-12]:
             dataset_name = os.path.splitext(filename)[0] + ".tsv"
 
             with open(os.path.join(args.input_bert, filename)) as f_in:
