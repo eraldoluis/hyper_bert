@@ -62,6 +62,7 @@ def infos_eval(dict_result):
             hyper_num += 1
     return hyper_num
 
+
 def output2(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, include_oov=True):
 
     hyper_num = infos_eval(dict_pairs)
@@ -150,6 +151,62 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, 
                 f'{ap}\t{include_oov}\t{corpus}\n')
 
 
+def output_by_pattern(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, include_oov=True):
+    hyper_num = infos_eval(dict_pairs)
+    oov_num = 0
+    logger.info("Calculando score...")
+    method = ["mean_subword", "all_subword"]
+    sub_method = ["mean_positional_rank", "min_positional_rank", "max_pattern", "mean_pattern"]
+    for m in method:
+        if m == "all_subword":
+            """
+
+               :param new_pairs: {'a b True hyper': { 'pattern1' : 0.1,
+                                                       'pattern2' : 0.2
+                                                       }
+                                   }
+            """
+            new_pairs = {}
+            for data, pattern in dict_pairs.items():
+                new_pairs[data] = {}
+                for pattern_name in patterns_list:
+                    values = dict_pairs[data][pattern_name]
+                    if len(values[0]) > 1 or len(values[1]) > 1:
+                        raise ValueError
+                    if "z_score" in dict_pairs[data]:
+                        new_pairs[data][pattern_name] = (sum(list(sum(values, [])))) / dict_pairs[data]['z_score'][pattern_name]
+                    else:
+                        new_pairs[data][pattern_name] = (sum(list(sum(values, []))))
+        elif m == "mean_subword":
+            """
+               em pattern 1 o hiponimo é quebrado em 2 subwords com scores=[-10,-20]                                                       
+               :param dict_pairs: {'a b True hyper': { 'pattern1' : [[-10, -20], [-5]],
+                                                       'pattern2' : 0.2
+                                                       }
+                                   }
+            """
+            new_pairs = {}
+            for data, pattern in dict_pairs.items():
+                new_pairs[data] = {}
+                for pattern_name in patterns_list:
+                    values = dict_pairs[data][pattern_name]
+                    if len(values[0]) > 1 or len(values[1]) > 1:
+                        raise ValueError
+                    if "z_score" in dict_pairs[data]:
+                        new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1])) / dict_pairs[data]['z_score'][pattern_name]
+                    else:
+                        new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1]))
+        else:
+            raise ValueError
+
+        for pattern_name in patterns_list:
+            order_result = sorted(new_pairs.items(), key=lambda x: x[1][pattern_name], reverse=True)
+            ap = compute_AP(order_result)
+            f_out.write(
+                f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{m}\t'
+                f'{ap}\t{include_oov}\t{corpus}\t{pattern_name}\n')
+
+
 def read_vocab(path_vocab):
     vocab = []
     with open(path_vocab, mode="r", encoding="utf-8") as f:
@@ -188,7 +245,7 @@ def main():
         raise ValueError
 
     f_out = open(os.path.join(args.output_path, os.path.basename(args.input_bert), "result.tsv"), mode="a")
-    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\n")
+    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\tpattern\n")
 
     logger.info("Carregando datasets")
     dataset_token1 = ""
@@ -199,7 +256,7 @@ def main():
 
     for filename in os.listdir(args.input_bert):
         logger.info(f"file={filename}\t{dataset_token1}")
-        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] == os.path.splitext(dataset_token1)[0]:
+        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] == os.path.splitext(dataset_token1)[0][:-8]:
             dataset_name = os.path.splitext(filename)[0] + ".tsv"
 
             with open(os.path.join(args.input_bert, filename)) as f_in:
@@ -216,10 +273,14 @@ def main():
                     vocab, corpus_name = read_vocab(os.path.join(args.vocabs, v_p, "vocab.txt"))
                     dict_result = filter_oov(new_result, vocab)
                     logger.info("filtrando datasets")
-                    output2(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
+                    # output2(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
+                    #         args.vocabs is None)
+                    output_by_pattern(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
                             args.vocabs is None)
-                output2(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
-                    not args.vocabs is None)
+                # output2(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
+                #     not args.vocabs is None)
+                output_by_pattern(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
+                        not args.vocabs is None)
     f_out.close()
     logger.info("Done!")
 

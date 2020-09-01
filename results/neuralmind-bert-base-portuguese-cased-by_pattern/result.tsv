@@ -1,0 +1,61 @@
+model	dataset	N	oov	hyper_num	method	AP	include_oov	corpus	pattern
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6990258451632884	False	wikipedia120M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6868982285172186	False	wikipedia120M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6855711457604614	False	wikipedia120M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.625316181957601	False	wikipedia120M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6280106030575445	False	wikipedia120M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6990258451632884	False	wikipedia120M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6868982285172186	False	wikipedia120M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6855711457604614	False	wikipedia120M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.625316181957601	False	wikipedia120M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6280106030575445	False	wikipedia120M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6990258451632884	False	wikipedia240M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6868982285172186	False	wikipedia240M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6855711457604614	False	wikipedia240M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.625316181957601	False	wikipedia240M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6280106030575445	False	wikipedia240M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6990258451632884	False	wikipedia240M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6868982285172186	False	wikipedia240M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6855711457604614	False	wikipedia240M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.625316181957601	False	wikipedia240M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6280106030575445	False	wikipedia240M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	mean_subword	0.6991000111460492	False	wikipedia30M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	mean_subword	0.6869175120915341	False	wikipedia30M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	mean_subword	0.6856274578576329	False	wikipedia30M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	mean_subword	0.6253941111142732	False	wikipedia30M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	mean_subword	0.6280455188781825	False	wikipedia30M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	all_subword	0.6991000111460492	False	wikipedia30M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	all_subword	0.6869175120915341	False	wikipedia30M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	all_subword	0.6856274578576329	False	wikipedia30M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	all_subword	0.6253941111142732	False	wikipedia30M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	573	0	276	all_subword	0.6280455188781825	False	wikipedia30M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6990258451632884	False	wikipedia60M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6868982285172186	False	wikipedia60M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6855711457604614	False	wikipedia60M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.625316181957601	False	wikipedia60M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	mean_subword	0.6280106030575445	False	wikipedia60M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6990258451632884	False	wikipedia60M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6868982285172186	False	wikipedia60M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6855711457604614	False	wikipedia60M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.625316181957601	False	wikipedia60M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	574	0	276	all_subword	0.6280106030575445	False	wikipedia60M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	mean_subword	0.7010424511201652	False	wikipedia15M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	mean_subword	0.6876253316647221	False	wikipedia15M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	mean_subword	0.6875294161029716	False	wikipedia15M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	mean_subword	0.6261674384638687	False	wikipedia15M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	mean_subword	0.631299148231053	False	wikipedia15M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	all_subword	0.7010424511201652	False	wikipedia15M	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	all_subword	0.6876253316647221	False	wikipedia15M	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	all_subword	0.6875294161029716	False	wikipedia15M	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	all_subword	0.6261674384638687	False	wikipedia15M	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	570	0	275	all_subword	0.631299148231053	False	wikipedia15M	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	mean_subword	0.7092702079151435	True	bert	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	mean_subword	0.6823813709464237	True	bert	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	mean_subword	0.6823226787970487	True	bert	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	mean_subword	0.6355012178754526	True	bert	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	mean_subword	0.6141704800305788	True	bert	{} , um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	all_subword	0.7092702079151435	True	bert	{} é um tipo de {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	all_subword	0.6823813709464237	True	bert	{} é um {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	all_subword	0.6823226787970487	True	bert	{} e outros {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	all_subword	0.6355012178754526	True	bert	{} ou outro {}
+neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1.tsv	1045	0	518	all_subword	0.6141704800305788	True	bert	{} , um {}
