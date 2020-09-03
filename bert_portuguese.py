@@ -209,7 +209,7 @@ class ClozeBert:
 
             for pattern in patterns:
                 if not pattern in self.z_score:
-                    self.z_score[pattern] = self.z_build_sentences(pattern, tokens_dataset).item()
+                    self.z_score[pattern] = self.z_score_1(pattern, tokens_dataset)
                 sentences, idx_h, idx_mask = self.build_sentences(pattern, pair)
                 idx_all = idx_h[0].copy()
                 idx_all.extend(idx_h[1])
@@ -242,7 +242,8 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
-    def z_build_sentences(self, pattern, tokens_dataset):  # feito, agora falta tratar onde isso eh chamado
+    def z_score_1(self, pattern, tokens_dataset):  # feito, agora falta tratar onde isso eh chamado
+        # está errado o Z score
         p = pattern.format("", "").strip()
         logger.info("Tokenizing...")
         p_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(p))
@@ -268,10 +269,12 @@ class ClozeBert:
             examples = torch.tensor(senteces_mask_all, device=self.device)
             # segments_tensors = torch.tensor([segments_ids])
             outputs = self.model(examples)  # , segments_tensors)
+        # shape predict (2*dataset_words, sentence_len, vocab_bert)
         predict = outputs[0]
         # predict = f.log_softmax(predict, dim=2)
-        predict = predict[torch.arange(len(senteces_mask_all), device=self.device), idx_masks, tokens_dataset * 2]
-        soma = predict.sum()
+        tensor_tokens_dataset = torch.tensor(tokens_dataset).unsqueeze(dim=1)
+        predict = predict[torch.arange(len(senteces_mask_all), device=self.device), idx_masks, tensor_tokens_dataset]
+        soma = predict.sum().item()
         return soma
 
 
