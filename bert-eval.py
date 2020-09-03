@@ -176,6 +176,7 @@ def output_by_pattern(dict_pairs, dataset_name, model_name, f_out, patterns_list
                     if "z_score" in dict_pairs[data]:
                         new_pairs[data][pattern_name] = (sum(list(sum(values, [])))) / dict_pairs[data]['z_score'][pattern_name]
                     else:
+                        raise ValueError
                         new_pairs[data][pattern_name] = (sum(list(sum(values, []))))
         elif m == "mean_subword":
             """
@@ -195,6 +196,7 @@ def output_by_pattern(dict_pairs, dataset_name, model_name, f_out, patterns_list
                     if "z_score" in dict_pairs[data]:
                         new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1])) / dict_pairs[data]['z_score'][pattern_name]
                     else:
+                        raise ValueError
                         new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1]))
         else:
             raise ValueError
@@ -256,7 +258,7 @@ def main():
 
     for filename in os.listdir(args.input_bert):
         logger.info(f"file={filename}\t{dataset_token1}")
-        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] == os.path.splitext(dataset_token1)[0][:-8]:
+        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] == os.path.splitext(dataset_token1)[0]:
             dataset_name = os.path.splitext(filename)[0] + ".tsv"
 
             with open(os.path.join(args.input_bert, filename)) as f_in:

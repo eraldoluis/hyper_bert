@@ -1,0 +1,61 @@
+model	dataset	N	oov	hyper_num	method	AP	include_oov	corpus	pattern
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.694222332194184	False	wikipedia120M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.6820592981610096	False	wikipedia120M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.3675528285769739	False	wikipedia120M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.3783749312875987	False	wikipedia120M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.6273065511380644	False	wikipedia120M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.694222332194184	False	wikipedia120M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.6820592981610096	False	wikipedia120M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.3675528285769739	False	wikipedia120M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.3783749312875987	False	wikipedia120M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.6273065511380644	False	wikipedia120M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.694222332194184	False	wikipedia240M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.6820592981610096	False	wikipedia240M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.3675528285769739	False	wikipedia240M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.3783749312875987	False	wikipedia240M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.6273065511380644	False	wikipedia240M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.694222332194184	False	wikipedia240M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.6820592981610096	False	wikipedia240M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.3675528285769739	False	wikipedia240M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.3783749312875987	False	wikipedia240M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.6273065511380644	False	wikipedia240M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	mean_subword	0.6943380458868184	False	wikipedia30M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	mean_subword	0.6820851817785797	False	wikipedia30M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	mean_subword	0.3686353976820825	False	wikipedia30M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	mean_subword	0.3794788597133446	False	wikipedia30M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	mean_subword	0.6273381006684879	False	wikipedia30M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	all_subword	0.6943380458868184	False	wikipedia30M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	all_subword	0.6820851817785797	False	wikipedia30M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	all_subword	0.3686353976820825	False	wikipedia30M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	all_subword	0.3794788597133446	False	wikipedia30M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	573	0	276	all_subword	0.6273381006684879	False	wikipedia30M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.694222332194184	False	wikipedia60M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.6820592981610096	False	wikipedia60M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.3675528285769739	False	wikipedia60M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.3783749312875987	False	wikipedia60M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	mean_subword	0.6273065511380644	False	wikipedia60M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.694222332194184	False	wikipedia60M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.6820592981610096	False	wikipedia60M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.3675528285769739	False	wikipedia60M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.3783749312875987	False	wikipedia60M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	574	0	276	all_subword	0.6273065511380644	False	wikipedia60M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	mean_subword	0.6963532676154883	False	wikipedia15M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	mean_subword	0.6826520106690429	False	wikipedia15M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	mean_subword	0.368675122502695	False	wikipedia15M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	mean_subword	0.3800383336496889	False	wikipedia15M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	mean_subword	0.6303629532211265	False	wikipedia15M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	all_subword	0.6963532676154883	False	wikipedia15M	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	all_subword	0.6826520106690429	False	wikipedia15M	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	all_subword	0.368675122502695	False	wikipedia15M	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	all_subword	0.3800383336496889	False	wikipedia15M	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	570	0	275	all_subword	0.6303629532211265	False	wikipedia15M	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	mean_subword	0.7040361980911993	True	bert	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	mean_subword	0.6787879681431817	True	bert	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	mean_subword	0.37667653592521017	True	bert	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	mean_subword	0.3897311326978383	True	bert	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	mean_subword	0.6130324576097845	True	bert	{} , um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	all_subword	0.7040361980911993	True	bert	{} é um tipo de {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	all_subword	0.6787879681431817	True	bert	{} é um {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	all_subword	0.37667653592521017	True	bert	{} e outros {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	all_subword	0.3897311326978383	True	bert	{} ou outro {}
+z-score_neuralmind-bert-base-portuguese-cased	conceptnet-hypernym-1_token_1.tsv	1045	0	518	all_subword	0.6130324576097845	True	bert	{} , um {}
