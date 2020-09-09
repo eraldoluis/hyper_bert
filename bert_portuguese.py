@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ClozeBert:
-    def __init__(self, model_name, oov = True):
+    def __init__(self, model_name, oov=True):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO)
@@ -30,8 +30,9 @@ class ClozeBert:
         # self.models = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model.to(self.device)
-        self.z_score = {}
-
+        self.z_score = []
+        for i in range(20):
+            self.z_score.append([0] * 20)
 
     def most_probabable_words(self, texts):
         words_probs_s = []
@@ -181,7 +182,6 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
-
     def z_sentence_score(self, patterns, dataset, vocab_dive, tokens_dataset):
         words_probs_s = {}
         hyper = True
@@ -207,9 +207,14 @@ class ClozeBert:
             if row[3] == "hyper":
                 hyper_num += 1
 
+            # verificar o tamanho dos subtokens de cada palavra
+            size_subtoken_hypo,  size_subtoken_hyper= self.get_len_subtoken(pair)
             for pattern in patterns:
-                if not pattern in self.z_score:
-                    self.z_score[pattern] = self.z_score_1(pattern, tokens_dataset)
+                if not isinstance(self.z_score[size_subtoken_hypo][size_subtoken_hyper], dict):
+                    self.z_score[size_subtoken_hypo][size_subtoken_hyper] = {}
+                if not pattern in self.z_score[size_subtoken_hypo][size_subtoken_hyper]:
+                    self.z_score[size_subtoken_hypo][size_subtoken_hyper][pattern] = self.z_score_1(pattern, tokens_dataset, size_subtoken_hypo, size_subtoken_hyper)
+
                 sentences, idx_h, idx_mask = self.build_sentences(pattern, pair)
                 idx_all = idx_h[0].copy()
                 idx_all.extend(idx_h[1])
@@ -233,7 +238,7 @@ class ClozeBert:
                 # predict for sentences. shape( len(sentences) )
                 # print(predict)
 
-                words_probs_s[" ".join(row)]["z_score"] = self.z_score.copy()
+                words_probs_s[" ".join(row)]["z_score"] = self.z_score[size_subtoken_hypo][size_subtoken_hyper].copy()
 
                 words_probs_s[" ".join(row)][pattern] = []
                 words_probs_s[" ".join(row)][pattern].append(predict_hypon.cpu().numpy().tolist())
@@ -242,8 +247,8 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
-    def z_score_1(self, pattern, tokens_dataset):  # feito, agora falta tratar onde isso eh chamado
-        # está errado o Z score
+    def z_score_1(self, pattern, tokens_dataset, len_hypo, len_hyper):
+        # calcular para diversos tamanhos de subtoken
         p = pattern.format("", "").strip()
         logger.info("Tokenizing...")
         p_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(p))
@@ -253,13 +258,15 @@ class ClozeBert:
         senteces_mask_all = []
         # fixar inicio e mascarar final
         for t_v in tokens_dataset:
-            sentence = [self.tokenizer.cls_token_id] + [t_v] + p_tokenize + [self.tokenizer.mask_token_id] + [self.tokenizer.sep_token_id]
+            sentence = [self.tokenizer.cls_token_id] + [t_v] + p_tokenize + [self.tokenizer.mask_token_id] + [
+                self.tokenizer.sep_token_id]
             idx_masks.append(sentence.index(self.tokenizer.mask_token_id))
             senteces_mask_all.append(sentence)
 
         # fixar final e mascarar inicio
         for t_v in tokens_dataset:
-            sentence = [self.tokenizer.cls_token_id] + [self.tokenizer.mask_token_id] + p_tokenize + [t_v] + [self.tokenizer.sep_token_id]
+            sentence = [self.tokenizer.cls_token_id] + [self.tokenizer.mask_token_id] + p_tokenize + [t_v] + [
+                self.tokenizer.sep_token_id]
             idx_masks.append(sentence.index(self.tokenizer.mask_token_id))
             senteces_mask_all.append(sentence)
 
@@ -277,6 +284,10 @@ class ClozeBert:
         soma = predict.sum().item()
         return soma
 
+    def get_len_subtoken(self, pair):
+        hyponym = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
+        hypernym = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
+        return len(hyponym), len(hypernym)
 
     def build_sentences(self, pattern, pair):  # feito, agora falta tratar onde isso eh chamado
         sentence1 = pattern.format("[MASK]", pair[1])
@@ -330,8 +341,11 @@ class ClozeBert:
     def get_tokens_dataset(self, pairs_token_1):
         vocab = []
         for data in pairs_token_1:
-            vocab.append(data[0])
-            vocab.append(data[1])
+            vocab.extend(self.tokenizer.tokenize(data[0]))
+            vocab.extend(self.tokenizer.tokenize(data[1]))
+        # removendo tokens repetidos
+        vocab = set(vocab)
+        vocab = list(vocab)
         logger.info("Tokenizando vocab...")
         vocab_tokenize = self.tokenizer.convert_tokens_to_ids(vocab)
         return vocab_tokenize
@@ -346,17 +360,17 @@ def load_eval_file(f_in):
         is_hyper = is_hyper.strip()
         rel = rel.strip()
         eval_data.append([child, parent, is_hyper, rel])
-    #random.shuffle(eval_data)
+    # random.shuffle(eval_data)
     return eval_data
 
 
-def save_bert_file(dict, output, dataset_name, model_name, hyper_num, oov_num, f_info_out, include_oov = True):
+def save_bert_file(dict, output, dataset_name, model_name, hyper_num, oov_num, f_info_out, include_oov=True):
     logger.info("save info...")
     f_info_out.write(f'{model_name}\t{dataset_name}\t{len(dict)}\t{oov_num}\t{hyper_num}\t{include_oov}\n')
     logger.info("save json...")
     dname = os.path.splitext(dataset_name)[0]
     fjson = json.dumps(dict, ensure_ascii=False)
-    f = open(os.path.join(output, model_name.replace("/","-"), dname + ".json"), mode="w", encoding="utf-8")
+    f = open(os.path.join(output, model_name.replace("/", "-"), dname + ".json"), mode="w", encoding="utf-8")
     f.write(fjson)
     f.close()
 
@@ -367,7 +381,8 @@ def main():
     parser.add_argument("-e", "--eval_path", type=str, help="path to datasets", required=True)
     parser.add_argument("-o", "--output_path", type=str, help="path to dir output", required=False)
     parser.add_argument("-v", "--vocab", type=str, help="dir of vocab", required=False)
-    parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results")
+    parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results",
+                        default=True)  # sempre True
 
     args = parser.parse_args()
     print("Iniciando bert...")
@@ -397,32 +412,33 @@ def main():
     #         word, count = line.strip().split()
     #         dive_vocab.append(word)
 
-    # print(f"dataset=TESTE size={len(pairs_token_1)}")
-    # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
-    #                f_out, args.include_oov)
-    # logger.info(f"result_size={len(result)}")
+    print(f"dataset=TESTE size={len(pairs_token_1)}")
+    vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
+    result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
+                   f_out, args.include_oov)
+    logger.info(f"result_size={len(result)}")
 
-    for file_dataset in os.listdir(args.eval_path):
-        if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
-            with open(os.path.join(args.eval_path, file_dataset)) as f_in:
-                logger.info("Loading dataset ...")
-                eval_data = load_eval_file(f_in)
-                vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-                result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
-                                                                            vocab_dataset_tokens)
-                save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
-                               oov_num, f_out, args.include_oov)
-                # eval_data = load_eval_file(f_in)
-                # print(f"dataset={file_dataset} size={len(eval_data)}")
-                # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
-                # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total, oov_num, f_out, args.include_oov)
-                logger.info(f"result_size={len(result)}")
+    # for file_dataset in os.listdir(args.eval_path):
+    #     if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
+    #         with open(os.path.join(args.eval_path, file_dataset)) as f_in:
+    #             logger.info("Loading dataset ...")
+    #             eval_data = load_eval_file(f_in)
+    #             vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
+    #             result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
+    #                                                                         vocab_dataset_tokens)
+    #             save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
+    #                            oov_num, f_out, args.include_oov)
+    #             # eval_data = load_eval_file(f_in)
+    #             # print(f"dataset={file_dataset} size={len(eval_data)}")
+    #             # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
+    #             # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total, oov_num, f_out, args.include_oov)
+    #             logger.info(f"result_size={len(result)}")
     f_out.close()
     logger.info("Done")
     print("Done!")
+    return cloze_model, pairs_token_1, result
 
 
 if __name__ == "__main__":
-    main()
+    model, dataset, result = main()
