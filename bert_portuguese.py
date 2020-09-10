@@ -425,28 +425,28 @@ def main():
     #         word, count = line.strip().split()
     #         dive_vocab.append(word)
 
-    print(f"dataset=TESTE size={len(pairs_token_1)}")
-    vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
-                   f_out, args.include_oov)
-    logger.info(f"result_size={len(result)}")
+    # print(f"dataset=TESTE size={len(pairs_token_1)}")
+    # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
+    # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
+    #                f_out, args.include_oov)
+    # logger.info(f"result_size={len(result)}")
 
-    # for file_dataset in os.listdir(args.eval_path):
-    #     if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
-    #         with open(os.path.join(args.eval_path, file_dataset)) as f_in:
-    #             logger.info("Loading dataset ...")
-    #             eval_data = load_eval_file(f_in)
-    #             vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-    #             result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
-    #                                                                         vocab_dataset_tokens)
-    #             save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
-    #                            oov_num, f_out, args.include_oov)
-    #             # eval_data = load_eval_file(f_in)
-    #             # print(f"dataset={file_dataset} size={len(eval_data)}")
-    #             # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
-    #             # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total, oov_num, f_out, args.include_oov)
-    #             logger.info(f"result_size={len(result)}")
+    for file_dataset in os.listdir(args.eval_path):
+        if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
+            with open(os.path.join(args.eval_path, file_dataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
+                result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
+                                                                            vocab_dataset_tokens)
+                save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
+                               oov_num, f_out, args.include_oov)
+                # eval_data = load_eval_file(f_in)
+                # print(f"dataset={file_dataset} size={len(eval_data)}")
+                # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
+                # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total, oov_num, f_out, args.include_oov)
+                logger.info(f"result_size={len(result)}")
     f_out.close()
     logger.info("Done")
     print("Done!")
