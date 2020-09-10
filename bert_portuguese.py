@@ -7,6 +7,7 @@ import argparse
 import random
 import json
 import os
+import itertools
 
 logger = logging.getLogger(__name__)
 
@@ -250,37 +251,22 @@ class ClozeBert:
     def z_score_1(self, pattern, tokens_dataset, len_hypo, len_hyper):
         # calcular para diversos tamanhos de subtoken
         p = pattern.format("", "").strip()
-        logger.info("Tokenizing...")
+        logger.info("Tokenizing for Z...")
         p_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(p))
 
-        # pegar indice das masks
-        idx_masks = []
-        senteces_mask_all = []
-        # fixar inicio e mascarar final
-        for t_v in tokens_dataset:
-            sentence = [self.tokenizer.cls_token_id] + [t_v] + p_tokenize + [self.tokenizer.mask_token_id] + [
-                self.tokenizer.sep_token_id]
-            idx_masks.append(sentence.index(self.tokenizer.mask_token_id))
-            senteces_mask_all.append(sentence)
-
-        # fixar final e mascarar inicio
-        for t_v in tokens_dataset:
-            sentence = [self.tokenizer.cls_token_id] + [self.tokenizer.mask_token_id] + p_tokenize + [t_v] + [
-                self.tokenizer.sep_token_id]
-            idx_masks.append(sentence.index(self.tokenizer.mask_token_id))
-            senteces_mask_all.append(sentence)
-
+        sentences_mask_all, idx_mask_all = self.get_sentence_z_score(tokens_dataset,len_hypo, len_hyper, p_tokenize)
         logger.info("Z Score calc...")
         self.model.eval()
         with torch.no_grad():
-            examples = torch.tensor(senteces_mask_all, device=self.device)
+            examples = torch.tensor(sentences_mask_all, device=self.device)
             # segments_tensors = torch.tensor([segments_ids])
             outputs = self.model(examples)  # , segments_tensors)
         # shape predict (2*dataset_words, sentence_len, vocab_bert)
         predict = outputs[0]
         # predict = f.log_softmax(predict, dim=2)
-        tensor_tokens_dataset = torch.tensor(tokens_dataset).unsqueeze(dim=1)
-        predict = predict[torch.arange(len(senteces_mask_all), device=self.device), idx_masks, tensor_tokens_dataset]
+        tensor_tokens_dataset = torch.tensor(tokens_dataset, device=self.device).unsqueeze(dim=1)
+        idx_mask_tensor = torch.tensor(idx_mask_all, device=self.device)
+        predict = predict[torch.arange(len(sentences_mask_all), device=self.device), idx_mask_tensor, tensor_tokens_dataset]
         soma = predict.sum().item()
         return soma
 
@@ -288,6 +274,32 @@ class ClozeBert:
         hyponym = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
         hypernym = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
         return len(hyponym), len(hypernym)
+
+    def get_sentence_z_score(self, tokens_dataset, len_hypo, len_hyper, pattern):
+        size = len_hypo + len_hyper
+        comb_obj = itertools.product(tokens_dataset, repeat=size-1)
+        comb_list = list(map(list, comb_obj))
+        sentences = []
+
+        for i in range(size):
+            for j in range(len(comb_list)):
+                sentence = comb_list[j].copy()
+                sentence.insert(i, self.tokenizer.mask_token_id)
+                sentences.append(sentence)
+        sentences = np.array(sentences)
+
+        init_sentence = [[self.tokenizer.cls_token_id]] * len(sentences)
+        end_sentence = [[self.tokenizer.sep_token_id]] * len(sentences)
+        pattern_sentence = [pattern] * len(sentences)
+
+        sentence_hypo = sentences[:, :len_hypo]
+        sentence_hyper = sentences[:, len_hypo:]
+
+        sentences_prod = np.concatenate((init_sentence, sentence_hypo, pattern_sentence, sentence_hyper, end_sentence), axis=1)
+        idx_mask= np.where(sentences_prod == self.tokenizer.mask_token_id)
+        idx_mask = idx_mask[1].tolist()
+        return sentences_prod.tolist(), idx_mask
+
 
     def build_sentences(self, pattern, pair):  # feito, agora falta tratar onde isso eh chamado
         sentence1 = pattern.format("[MASK]", pair[1])
@@ -403,7 +415,8 @@ def main():
 
     pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
                      ['acidente', 'acontecimento', 'True', 'hyper'],
-                     ['pessoa', 'discurso', 'False', 'random']]
+                     ['pessoa', 'discurso', 'False', 'random'],
+                     ["banana", "fruta", "True", "hyper"]]
 
     # logger.info("Loading vocab dive ...")
     # dive_vocab = []
