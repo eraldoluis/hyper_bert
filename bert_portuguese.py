@@ -230,6 +230,10 @@ class ClozeBert:
                     outputs = self.model(examples)  # , segments_tensors)
                 predict = outputs[0]
                 # predict = f.log_softmax(predict, dim=2)
+
+                # exp no predict
+                predict = torch.exp(predict)
+
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
 
                 predict_hypon = predict[:len(idx_h[0])]
@@ -264,6 +268,9 @@ class ClozeBert:
         # shape predict (2*dataset_words, sentence_len, vocab_bert)
         predict = outputs[0]
         # predict = f.log_softmax(predict, dim=2)
+
+        # exp no zscore
+        predict = torch.exp(predict)
         tensor_tokens_dataset = torch.tensor(tokens_dataset, device=self.device).unsqueeze(dim=1)
         idx_mask_tensor = torch.tensor(idx_mask_all, device=self.device)
         predict = predict[torch.arange(len(sentences_mask_all), device=self.device), idx_mask_tensor, tensor_tokens_dataset]
@@ -426,7 +433,7 @@ def main():
     #         word, count = line.strip().split()
     #         dive_vocab.append(word)
 
-    # Testes
+    # # Testes
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
     # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
