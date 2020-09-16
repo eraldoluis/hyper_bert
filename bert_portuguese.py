@@ -407,7 +407,7 @@ def main():
     f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
     f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
-    patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+    patterns = ["{}  é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
     # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
 
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
@@ -415,8 +415,9 @@ def main():
 
     pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
                      ['acidente', 'acontecimento', 'True', 'hyper'],
-                     ['pessoa', 'discurso', 'False', 'random'],
-                     ["banana", "fruta", "True", "hyper"]]
+                     ['pessoa', 'discurso', 'False', 'random']]
+                     # ['pessoa', 'discurso', 'False', 'random'],
+                     # ["banana", "fruta", "True", "hyper"]]
 
     # logger.info("Loading vocab dive ...")
     # dive_vocab = []
@@ -425,6 +426,7 @@ def main():
     #         word, count = line.strip().split()
     #         dive_vocab.append(word)
 
+    # Testes
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
     # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
@@ -450,8 +452,12 @@ def main():
     f_out.close()
     logger.info("Done")
     print("Done!")
-    return cloze_model, pairs_token_1, result
 
 
 if __name__ == "__main__":
-    model, dataset, result = main()
+    main()
+
+
+'''
+size tokens dataset  = 2723
+'''
