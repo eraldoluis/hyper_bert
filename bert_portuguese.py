@@ -232,7 +232,7 @@ class ClozeBert:
                 # predict = f.log_softmax(predict, dim=2)
 
                 # exp no predict
-                predict = torch.exp(predict)
+                # predict = torch.exp(predict)
 
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
 
@@ -270,7 +270,7 @@ class ClozeBert:
         # predict = f.log_softmax(predict, dim=2)
 
         # exp no zscore
-        predict = torch.exp(predict)
+        # predict = torch.exp(predict)
         tensor_tokens_dataset = torch.tensor(tokens_dataset, device=self.device).unsqueeze(dim=1)
         idx_mask_tensor = torch.tensor(idx_mask_all, device=self.device)
         predict = predict[torch.arange(len(sentences_mask_all), device=self.device), idx_mask_tensor, tensor_tokens_dataset]
