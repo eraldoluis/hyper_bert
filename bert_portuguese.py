@@ -403,6 +403,12 @@ def main():
     parser.add_argument("-u", "--include_oov", action="store_true", help="to include oov on results",
                         default=True)  # sempre True
 
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-l", "--log", action="store_true")
+    group.add_argument("-z", "--zscore", action="store_true")
+
+
+
     args = parser.parse_args()
     print("Iniciando bert...")
     cloze_model = ClozeBert(args.model_name)
@@ -415,7 +421,16 @@ def main():
     f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
     patterns = ["{}  é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+
+    # 2018 RoolerEtal - Hearst Patterns Revisited
+    patterns2 = ["{} que é um exemplo de {}", "{} que é uma classe de {}", "{} que é um tipo de {}",
+                 "{} e qualquer outro {}", "{} e algum outro {}", "{} ou qualquer outro {}", "{} ou algum outro {}",
+                 "{} que é chamado de {}",
+                 "{} é um caso especial de {}",
+                 "{} incluindo {}"]
     # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
+
+    patterns.extend(patterns2)
 
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
@@ -436,11 +451,15 @@ def main():
     # # Testes
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # # com zscore
-    # # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    #
-    # # com lofsoftmax
-    # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # if args.zscore:
+    #     logger.info(f"Run Z Score = {args.zscore}")
+    #     # com zscore
+    #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # #
+    # if args.log:
+    #     logger.info(f"Run Log Softmax = {args.log}")
+    #     # com lofsoftmax
+    #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
     #                f_out, args.include_oov)
     # logger.info(f"result_size={len(result)}")
@@ -451,17 +470,17 @@ def main():
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
                 vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-                # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
-                #                                                             vocab_dataset_tokens)
+                # com zscore
+                if args.zscore:
+                    logger.info(f"Run Z Score = {args.zscore}")
+                    result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
                 # com log_softmax
-                result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                if args.log:
+                    logger.info(f"Run Log Softmax = {args.log}")
+                    result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
 
                 save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
                                oov_num, f_out, args.include_oov)
-                # eval_data = load_eval_file(f_in)
-                # print(f"dataset={file_dataset} size={len(eval_data)}")
-                # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data[:10], dive_vocab)
-                # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total, oov_num, f_out, args.include_oov)
                 logger.info(f"result_size={len(result)}")
     f_out.close()
     logger.info("Done")
@@ -470,7 +489,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 '''
 size tokens dataset  = 2723
