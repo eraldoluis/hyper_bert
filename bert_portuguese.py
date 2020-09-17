@@ -125,7 +125,7 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
-    def sentence_score(self, patterns, dataset, vocab_dive):
+    def sentence_score(self, patterns, dataset, vocab_dive, vocab_tokens):
         words_probs_s = {}
         hyper = True
         oov = 0
@@ -436,7 +436,11 @@ def main():
     # # Testes
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # # com zscore
+    # # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    #
+    # # com lofsoftmax
+    # result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
     #                f_out, args.include_oov)
     # logger.info(f"result_size={len(result)}")
@@ -447,8 +451,11 @@ def main():
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
                 vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-                result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
-                                                                            vocab_dataset_tokens)
+                # result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [],
+                #                                                             vocab_dataset_tokens)
+                # com log_softmax
+                result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+
                 save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
                                oov_num, f_out, args.include_oov)
                 # eval_data = load_eval_file(f_in)
