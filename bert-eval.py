@@ -237,7 +237,13 @@ def main():
     parser.add_argument("--vocabs", type=str, help="dir vocabs", required=False)
     args = parser.parse_args()
 
-    patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+    patterns = ["{}  é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+    patterns2 = ["{} que é um exemplo de {}", "{} que é uma classe de {}", "{} que é um tipo de {}",
+                 "{} e qualquer outro {}", "{} e algum outro {}", "{} ou qualquer outro {}", "{} ou algum outro {}",
+                 "{} que é chamado de {}",
+                 "{} é um caso especial de {}",
+                 "{} incluindo {}"]
+    patterns.extend(patterns2)
 
     # f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"mean positional rank"}\t'
     #             f'{ap}\t{include_oov}\n')
@@ -252,9 +258,10 @@ def main():
     logger.info("Carregando datasets")
     dataset_token1 = ""
     for filename in os.listdir(args.eval_path):
-        with open(os.path.join(args.eval_path, filename), mode="r", encoding="utf-8") as f:
-            data = load_eval_file(f)
-            dataset_token1 = filename
+        if os.path.isfile(os.path.join(args.eval_path, filename)):
+            with open(os.path.join(args.eval_path, filename), mode="r", encoding="utf-8") as f:
+                data = load_eval_file(f)
+                dataset_token1 = filename
 
     for filename in os.listdir(args.input_bert):
         logger.info(f"file={filename}\t{dataset_token1}")

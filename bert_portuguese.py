@@ -13,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class ClozeBert:
-    def __init__(self, model_name, oov=True):
+    def __init__(self, model_name, exp=False, oov=True):
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                             datefmt='%m/%d/%Y %H:%M:%S',
                             level=logging.INFO)
         self.include_oov = oov
+        self.exp = exp
 
         if torch.cuda.is_available():
             self.device = torch.device('cuda')
@@ -231,10 +232,11 @@ class ClozeBert:
                 predict = outputs[0]
                 # predict = f.log_softmax(predict, dim=2)
 
-                # exp no predict
-                # predict = torch.exp(predict)
-
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
+
+                if self.exp:
+                    # exp no predict
+                    predict = torch.exp(predict)
 
                 predict_hypon = predict[:len(idx_h[0])]
                 # print(predict_hypon)
@@ -269,11 +271,12 @@ class ClozeBert:
         predict = outputs[0]
         # predict = f.log_softmax(predict, dim=2)
 
-        # exp no zscore
-        # predict = torch.exp(predict)
         tensor_tokens_dataset = torch.tensor(tokens_dataset, device=self.device).unsqueeze(dim=1)
         idx_mask_tensor = torch.tensor(idx_mask_all, device=self.device)
         predict = predict[torch.arange(len(sentences_mask_all), device=self.device), idx_mask_tensor, tensor_tokens_dataset]
+        if self.exp:
+            # exp no zscore
+            predict = torch.exp(predict)
         soma = predict.sum().item()
         return soma
 
@@ -406,12 +409,13 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-l", "--log", action="store_true")
     group.add_argument("-z", "--zscore", action="store_true")
+    group.add_argument("-x", "--zscore_exp", action="store_true")
 
 
 
     args = parser.parse_args()
     print("Iniciando bert...")
-    cloze_model = ClozeBert(args.model_name)
+    cloze_model = ClozeBert(args.model_name, args.zscore_exp)
     try:
         os.mkdir(os.path.join(args.output_path, args.model_name.replace("/", "-")))
     except:
@@ -420,7 +424,7 @@ def main():
     f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
     f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
-    patterns = ["{}  é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+    patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
 
     # 2018 RoolerEtal - Hearst Patterns Revisited
     patterns2 = ["{} que é um exemplo de {}", "{} que é uma classe de {}", "{} que é um tipo de {}",
@@ -471,7 +475,7 @@ def main():
                 eval_data = load_eval_file(f_in)
                 vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
                 # com zscore
-                if args.zscore:
+                if args.zscore or args.zscore_exp:
                     logger.info(f"Run Z Score = {args.zscore}")
                     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
                 # com log_softmax
