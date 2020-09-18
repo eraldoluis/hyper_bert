@@ -479,8 +479,8 @@ def main():
                     logger.info(f"Run Z Score = {args.zscore}")
                     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
                 # com log_softmax
-                if args.log:
-                    logger.info(f"Run Log Softmax = {args.log}")
+                if args.logsoftmax:
+                    logger.info(f"Run Log Softmax = {args.logsoftmax}")
                     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
 
                 save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
