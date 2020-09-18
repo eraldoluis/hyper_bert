@@ -65,23 +65,14 @@ class ClozeBert:
 
         return words_probs_s
 
-    def old_sentence_score(self, patterns, dataset, vocab_dive):
+
+    def bert_sentence_score(self, patterns, dataset, vocab_dive, vocab_tokens):
         words_probs_s = {}
         hyper = True
         oov = 0
         hyper_num = 0
-
         for row in dataset:
             pair = row[0:2]
-            # if (pair[0] not in vocab_dive or pair[1] not in vocab_dive) and (args.include_oov):
-            #     # par nao está no vocab do dive e calculo deverá incluí-lo
-            #     words_probs_s[" ".join(row)] = {}
-            #     words_probs_s[" ".join(row)]['oov'] = float("-inf")
-            #     oov += 1
-            #     if row[3] == "hyper":
-            #         hyper_num += 1
-            #     continue
-
             if (not self.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
                 oov += 1
                 # par nao está no vocab do dive e calculo NÃO deverá incluí-lo
@@ -91,40 +82,31 @@ class ClozeBert:
             if row[3] == "hyper":
                 hyper_num += 1
 
-            tokenized_hipo = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
-            tokenized_hype = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
             for pattern in patterns:
-                pattern_prob = []
-                string_pattern_list = self.build_sentences(pattern, pair)
-                for str_pattern in string_pattern_list:
-                    logger.info("Tokenizing...")
-                    tokenized_text = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(str_pattern))
+                sentences, idx_h, idx_mask = self.build_sentences(pattern, pair)
+                idx_all = idx_h[0].copy()
+                idx_all.extend(idx_h[1])
+                hyponym_idx, hypernym_idx = idx_h[0], idx_h[1]
+                sentences_hyponym = sentences[:len(hyponym_idx)]
+                sentences_hypernym = sentences[-len(hypernym_idx):]
+                logger.info("Predicting...")
+                self.model.eval()
+                with torch.no_grad():
+                    examples = torch.tensor(sentences, device=self.device)
+                    # segments_tensors = torch.tensor([segments_ids])
+                    outputs = self.model(examples)  # , segments_tensors)
+                predict = outputs[0]
+                predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
 
-                    # example = self.tokenizer.build_inputs_with_special_tokens(tokenized_text) # initial and end token
+                predict_hypon = predict[:len(idx_h[0])]
+                predict_hyper = predict[- len(idx_h[1]):]
 
-                    # idx_mask = example.index(self.tokenizer.mask_token_id)
-                    idx_mask = tokenized_text.index(self.tokenizer.mask_token_id)
-                    # segments_ids = [0] * len(tokenized_text)
-
-                    tokenized_mask = tokenized_hype if hyper else tokenized_hipo
-
-                    logger.info("Predicting...")
-                    self.model.eval()
-                    with torch.no_grad():
-                        examples = torch.tensor([tokenized_text], device=self.device)
-                        # segments_tensors = torch.tensor([segments_ids])
-                        outputs = self.model(examples)  # , segments_tensors)
-
-                    # outputs shape is (batch_example, words, scores).
-                    probs_mask = outputs[0][0, idx_mask, tokenized_mask]
-                    hyper = not hyper
-                    # probs_mask = torch.mean(probs_mask).item()
-                    probs_mask = torch.prod(probs_mask).item()
-                    pattern_prob.append(probs_mask)
-
-                words_probs_s[" ".join(row)][pattern] = np.prod(pattern_prob)
+                words_probs_s[" ".join(row)][pattern] = []
+                words_probs_s[" ".join(row)][pattern].append(predict_hypon.cpu().numpy().tolist())
+                words_probs_s[" ".join(row)][pattern].append(predict_hyper.cpu().numpy().tolist())
 
         return words_probs_s, hyper_num, oov
+
 
     def sentence_score(self, patterns, dataset, vocab_dive, vocab_tokens):
         words_probs_s = {}
@@ -184,6 +166,7 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
+
     def z_sentence_score(self, patterns, dataset, vocab_dive, tokens_dataset):
         words_probs_s = {}
         hyper = True
@@ -228,6 +211,7 @@ class ClozeBert:
                 with torch.no_grad():
                     examples = torch.tensor(sentences, device=self.device)
                     # segments_tensors = torch.tensor([segments_ids])
+                    self.model()
                     outputs = self.model(examples)  # , segments_tensors)
                 predict = outputs[0]
                 # predict = f.log_softmax(predict, dim=2)
@@ -254,6 +238,7 @@ class ClozeBert:
 
         return words_probs_s, hyper_num, oov
 
+
     def z_score_1(self, pattern, tokens_dataset, len_hypo, len_hyper):
         # calcular para diversos tamanhos de subtoken
         p = pattern.format("", "").strip()
@@ -274,16 +259,20 @@ class ClozeBert:
         tensor_tokens_dataset = torch.tensor(tokens_dataset, device=self.device).unsqueeze(dim=1)
         idx_mask_tensor = torch.tensor(idx_mask_all, device=self.device)
         predict = predict[torch.arange(len(sentences_mask_all), device=self.device), idx_mask_tensor, tensor_tokens_dataset]
+        values, indices = torch.topk(torch.topk(predict, k=1).values.view(-1), k=5)
+        logger.info(f"MAX values for z {values}")
         if self.exp:
             # exp no zscore
             predict = torch.exp(predict)
         soma = predict.sum().item()
         return soma
 
+
     def get_len_subtoken(self, pair):
         hyponym = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
         hypernym = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
         return len(hyponym), len(hypernym)
+
 
     def get_sentence_z_score(self, tokens_dataset, len_hypo, len_hyper, pattern):
         size = len_hypo + len_hyper
@@ -360,6 +349,7 @@ class ClozeBert:
         ids = [hyponym_tokenize, hypernym_tokenize]
         return sentences, ids, idx_masks
 
+
     def get_tokens_dataset(self, pairs_token_1):
         vocab = []
         for data in pairs_token_1:
@@ -407,11 +397,10 @@ def main():
                         default=True)  # sempre True
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("-l", "--log", action="store_true")
+    group.add_argument("-l", "--logsoftmax", action="store_true")
     group.add_argument("-z", "--zscore", action="store_true")
     group.add_argument("-x", "--zscore_exp", action="store_true")
-
-
+    group.add_argument("-b", "--bert_score", action="store_true")
 
     args = parser.parse_args()
     print("Iniciando bert...")
@@ -455,18 +444,25 @@ def main():
     # # Testes
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # if args.zscore:
+    # if args.zscore or args.zscore_exp:
     #     logger.info(f"Run Z Score = {args.zscore}")
+    #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
     #     # com zscore
     #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # #
-    # if args.log:
-    #     logger.info(f"Run Log Softmax = {args.log}")
-    #     # com lofsoftmax
+    # if args.logsoftmax:
+    #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+    #     # bert score
     #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    #
+    # if args.bert_score:
+    #     logger.info(f"Run BERT score = {args.bert_score}")
+    #     # com bert score
+    #     result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
     #                f_out, args.include_oov)
     # logger.info(f"result_size={len(result)}")
+    print(args)
 
     for file_dataset in os.listdir(args.eval_path):
         if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
@@ -474,6 +470,10 @@ def main():
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
                 vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
+                # com bert score
+                if args.bert_score:
+                    logger.info(f"Run BERT score = {args.bert_score}")
+                    result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
                 # com zscore
                 if args.zscore or args.zscore_exp:
                     logger.info(f"Run Z Score = {args.zscore}")
