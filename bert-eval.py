@@ -176,7 +176,6 @@ def output_by_pattern(dict_pairs, dataset_name, model_name, f_out, patterns_list
                     if "z_score" in dict_pairs[data]:
                         new_pairs[data][pattern_name] = (sum(list(sum(values, [])))) / dict_pairs[data]['z_score'][pattern_name]
                     else:
-                        raise ValueError
                         new_pairs[data][pattern_name] = (sum(list(sum(values, []))))
         elif m == "mean_subword":
             """
@@ -196,7 +195,6 @@ def output_by_pattern(dict_pairs, dataset_name, model_name, f_out, patterns_list
                     if "z_score" in dict_pairs[data]:
                         new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1])) / dict_pairs[data]['z_score'][pattern_name]
                     else:
-                        raise ValueError
                         new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1]))
         else:
             raise ValueError
@@ -237,7 +235,7 @@ def main():
     parser.add_argument("--vocabs", type=str, help="dir vocabs", required=False)
     args = parser.parse_args()
 
-    patterns = ["{}  é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+    patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
     patterns2 = ["{} que é um exemplo de {}", "{} que é uma classe de {}", "{} que é um tipo de {}",
                  "{} e qualquer outro {}", "{} e algum outro {}", "{} ou qualquer outro {}", "{} ou algum outro {}",
                  "{} que é chamado de {}",
