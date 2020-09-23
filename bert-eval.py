@@ -252,12 +252,15 @@ def main():
                  "{} incluindo {}"]
     patterns.extend(patterns2)
 
-    best_bert_score = ['{} que é um exemplo de {}', '{} incluindo {}', '{} que é chamado de {}', '{} é um tipo de {}']
+    best_bert_score = ['{} que é um exemplo de {}', '{} incluindo {}', '{} que é chamado de {}', '{} é um tipo de {}',
+                       '{} é um {}', '{} e outros {}', '{} que é um tipo de {}', '{} é um caso especial de {}',
+                       '{} que é uma classe de {}', '{} e qualquer outro {}', '{} ou qualquer outro {}', '{} , um {}',
+                       '{} ou outro {}', '{} ou algum outro {}', '{} e algum outro {}']
 
     # f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"mean positional rank"}\t'
     #             f'{ap}\t{include_oov}\n')
     try:
-        dir = os.path.join(args.output_path, os.path.basename(args.input_bert)+"_best-pattern")
+        dir = os.path.join(args.output_path, os.path.basename(args.input_bert)+"_sort-best-pattern")
         os.mkdir(dir)
     except ValueError:
         raise ValueError
