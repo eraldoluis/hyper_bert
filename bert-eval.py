@@ -84,7 +84,11 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, 
                 new_pairs[data] = {}
                 for pattern_name in patterns_list:
                     values = dict_pairs[data][pattern_name]
-                    new_pairs[data][pattern_name] = (sum(list(sum(values, [])))) / dict_pairs[data]['z_score'][pattern_name]
+                    if "z_score" in dict_pairs[data]:
+                        raise ValueError
+                        new_pairs[data][pattern_name] = (sum(list(sum(values, [])))) / dict_pairs[data]['z_score'][pattern_name]
+                    else:
+                        new_pairs[data][pattern_name] = (sum(list(sum(values, []))))
 
         elif m == "mean_subword":
             """
@@ -99,7 +103,12 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, 
                 new_pairs[data] = {}
                 for pattern_name in patterns_list:
                     values = dict_pairs[data][pattern_name]
-                    new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1])) / dict_pairs[data]['z_score'][pattern_name]
+                    if "z_score" in dict_pairs[data]:
+                        raise ValueError
+                        new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1])) / \
+                                                        dict_pairs[data]['z_score'][pattern_name]
+                    else:
+                        new_pairs[data][pattern_name] = (np.mean(values[0]) + np.mean(values[1]))
 
         else:
             raise ValueError
@@ -148,7 +157,7 @@ def output2(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, 
 
             f_out.write(
                 f'{model_name}\t{dataset_name}\t{len(order_final)}\t{oov_num}\t{hyper_num}\t{m} {s_m}\t'
-                f'{ap}\t{include_oov}\t{corpus}\n')
+                f'{ap}\t{include_oov}\t{corpus}\t{len(patterns_list)}\n')
 
 
 def output_by_pattern(dict_pairs, dataset_name, model_name, f_out, patterns_list, corpus, include_oov=True):
@@ -243,15 +252,20 @@ def main():
                  "{} incluindo {}"]
     patterns.extend(patterns2)
 
+    best_bert_score = ['{} que é um exemplo de {}', '{} incluindo {}', '{} que é chamado de {}', '{} é um tipo de {}']
+
     # f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"mean positional rank"}\t'
     #             f'{ap}\t{include_oov}\n')
     try:
-        os.mkdir(os.path.join(args.output_path, os.path.basename(args.input_bert)))
+        dir = os.path.join(args.output_path, os.path.basename(args.input_bert)+"_best-pattern")
+        os.mkdir(dir)
     except ValueError:
         raise ValueError
 
-    f_out = open(os.path.join(args.output_path, os.path.basename(args.input_bert), "result.tsv"), mode="a")
-    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\tpattern\n")
+    f_out = open(os.path.join(dir, "result.tsv"), mode="a")
+    f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\tqts_pattern\n")
+
+    # f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\tpattern\tqts_pattern\n")
 
     logger.info("Carregando datasets")
     dataset_token1 = ""
@@ -280,14 +294,18 @@ def main():
                     vocab, corpus_name = read_vocab(os.path.join(args.vocabs, v_p, "vocab.txt"))
                     dict_result = filter_oov(new_result, vocab)
                     logger.info("filtrando datasets")
-                    # output2(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
+                    for qtd_best_pattern in range(1, len(best_bert_score)+1):
+                        output2(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, best_bert_score[:qtd_best_pattern],
+                                corpus_name, args.vocabs is None)
+                    # output_by_pattern(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
                     #         args.vocabs is None)
-                    output_by_pattern(dict_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, corpus_name,
-                            args.vocabs is None)
                 # output2(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
                 #     not args.vocabs is None)
-                output_by_pattern(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
-                        not args.vocabs is None)
+                for qtd_best_pattern in range(1, len(best_bert_score) + 1):
+                    output2(new_result, dataset_name, os.path.basename(args.input_bert), f_out,
+                            best_bert_score[:qtd_best_pattern], "bert", not args.vocabs is None)
+                # output_by_pattern(new_result, dataset_name, os.path.basename(args.input_bert), f_out, patterns, "bert",
+                #         not args.vocabs is None)
     f_out.close()
     logger.info("Done!")
 
