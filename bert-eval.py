@@ -257,6 +257,8 @@ def main():
                        '{} que é uma classe de {}', '{} e qualquer outro {}', '{} ou qualquer outro {}', '{} , um {}',
                        '{} ou outro {}', '{} ou algum outro {}', '{} e algum outro {}']
 
+    assert len(patterns) == len(best_bert_score) and set(patterns) == set(best_bert_score)
+
     # f_out.write(f'{model_name}\t{dataset_name}\t{len(order_result)}\t{oov_num}\t{hyper_num}\t{"mean positional rank"}\t'
     #             f'{ap}\t{include_oov}\n')
     try:
@@ -271,16 +273,17 @@ def main():
     # f_out.write("model\tdataset\tN\toov\thyper_num\tmethod\tAP\tinclude_oov\tcorpus\tpattern\tqts_pattern\n")
 
     logger.info("Carregando datasets")
-    dataset_token1 = ""
+    dataset = {}
     for filename in os.listdir(args.eval_path):
         if os.path.isfile(os.path.join(args.eval_path, filename)):
             with open(os.path.join(args.eval_path, filename), mode="r", encoding="utf-8") as f:
                 data = load_eval_file(f)
-                dataset_token1 = filename
+                dataset_name_token1 = filename
+                dataset[dataset_name_token1] = data
 
     for filename in os.listdir(args.input_bert):
-        logger.info(f"file={filename}\t{dataset_token1}")
-        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] == os.path.splitext(dataset_token1)[0]:
+        logger.info(f"file={filename}\t{dataset_name_token1}")
+        if os.path.isfile(os.path.join(args.input_bert, filename)) and filename[-4:] == "json" and os.path.splitext(filename)[0] + ".tsv" in dataset:
             dataset_name = os.path.splitext(filename)[0] + ".tsv"
 
             with open(os.path.join(args.input_bert, filename)) as f_in:
@@ -288,7 +291,7 @@ def main():
                 result = json.load(f_in)
                 new_result = {}
                 # filtrando conforme o novo dataset de subtoken de tamanho 1
-                for i in data:
+                for i in dataset[dataset_name]:
                     if i in result:
                         new_result[i] = result[i]
 
