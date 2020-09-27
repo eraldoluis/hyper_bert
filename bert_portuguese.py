@@ -363,6 +363,17 @@ class ClozeBert:
         return vocab_tokenize
 
 
+    def subtoken_dataset(self, dataset):
+        size = []
+        for i in range(20):
+            size.append([0] * 20)
+
+        for pair in dataset:
+            hypo, hyper = self.get_len_subtoken(pair[:2])
+            size[hypo][hyper] =  size[hypo][hyper] + 1
+
+        return size
+
 def load_eval_file(f_in):
     eval_data = []
     for line in f_in:
@@ -491,8 +502,39 @@ def main():
     print("Done!")
 
 
+def subtoken_size():
+    print("Iniciando bert...")
+    model_name = "neuralmind/bert-base-portuguese-cased"
+    cloze_model = ClozeBert(model_name)
+    out_path = "results/subtoken_size/subtoken_dataset.tsv"
+    dataset_path = "/home/gabrielescobar/Documentos/dive-pytorch/datasets"
+    f_out = open(out_path, encoding="utf-8", mode="w")
+    f_out.write("model\tdataset\tsubtoken\tN\n")
+
+    pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
+                     ['acidente', 'acontecimento', 'True', 'hyper'],
+                     ['pessoa', 'discurso', 'False', 'random'],
+                     ['pessoa', 'discurso', 'False', 'random'],
+                     ["banana", "fruta", "True", "hyper"]]
+
+
+    for file_dataset in os.listdir(dataset_path):
+        if os.path.isfile(os.path.join(dataset_path, file_dataset)):
+            with open(os.path.join(dataset_path, file_dataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                size = cloze_model.subtoken_dataset(eval_data)
+                for i in range(len(size)):
+                    for j in range(len(size)):
+                        if size[i][j] != 0:
+                            f_out.write(f"{model_name}\t{file_dataset}\t{i},{j}\t{size[i][j]}\n")
+
+    f_out.close()
+    return cloze_model
+
 if __name__ == "__main__":
-    main()
+    # main()
+    m = subtoken_size()
 
 '''
 size tokens dataset  = 2723
