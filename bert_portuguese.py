@@ -32,6 +32,7 @@ class ClozeBert:
         # self.models = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model = BertForMaskedLM.from_pretrained(model_name, config=self.config)
         self.model.to(self.device)
+
         self.z_score = []
         for i in range(20):
             self.z_score.append([0] * 20)
@@ -395,10 +396,9 @@ class ClozeBert:
                 sentence = pattern.format(("[MASK]" * size[0]).strip(), ("[MASK]" * size[1]).strip())
                 sentence_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(sentence))
                 sentence_tokenize = self.tokenizer.build_inputs_with_special_tokens(sentence_tokenize)
-                idx_tensor = torch.tensor([x for x, y in enumerate(sentence_tokenize) if y == self.tokenizer.mask_token_id])
-
+                self.model.eval()
                 with torch.no_grad():
-                    idx_tensor = torch.tensor([x for x, y in enumerate(sentence_tokenize) if y == self.tokenizer.mask_token_id])
+                    idx_tensor = torch.tensor([x for x, y in enumerate(sentence_tokenize) if y == self.tokenizer.mask_token_id], device=self.device)
                     sentence_tensor = torch.tensor([sentence_tokenize], device=self.device)
                     outputs = self.model(sentence_tensor)  # , segments_tensors)
                     # shape predict (2*dataset_words, sentence_len, vocab_bert)
@@ -407,7 +407,7 @@ class ClozeBert:
                 max_k = predict.shape[-1]
                 # max_k = 5
 
-                dataset_token_size = torch.tensor(dataset_by_token_size[size])
+                dataset_token_size = torch.tensor(dataset_by_token_size[size], device=self.device)
                 for k in range(1, max_k):
                     idx_sorted = idx_token[:,:,:k]
                     idx = idx_sorted[0, idx_tensor]
@@ -415,10 +415,10 @@ class ClozeBert:
                     compare_sum = []
                     for i in range(len_token):
                         compare = torch.eq(idx[i].view(1,-1) ,dataset_token_size[:,i].view(-1,1))
-                        compare_sum.append(compare.sum().item())
-                    if all(i == compare_sum[0] for i in compare_sum):
-                        print(f"{dataset_name}\t{size}\t{pattern}\t{k}\t{compare_sum[0]}\t{dataset_token_size.shape[0]}\n")
-                        if compare_sum[0] == dataset_token_size.shape[0]:
+                        compare_sum.append(compare.sum().cpu().item())
+                    if all(x > 0 for x in compare_sum):
+                        print(f"{dataset_name}\t{size}\t{pattern}\t{k}\t{min(compare_sum)}\t{dataset_token_size.shape[0]}\n")
+                        if min(compare_sum) == dataset_token_size.shape[0]:
                             logger.info(f"Tamanho {size} terminou!")
                             break
 
@@ -453,6 +453,8 @@ def save_bert_file(dict, output, dataset_name, model_name, hyper_num, oov_num, f
 
 def main2():
     model_name = "neuralmind/bert-base-portuguese-cased"
+    # eval_path = "/home/gabrielescobar/Documentos/dive-pytorch/datasets"
+
     eval_path = "/home/gabrielescobar/dive-pytorch/datasets"
     logger.info("Iniciando bert...")
     cloze_model = ClozeBert(model_name)
@@ -480,7 +482,7 @@ def main2():
                      # ['pessoa', 'discurso', 'False', 'random'],
                      # ["banana", "fruta", "True", "hyper"]]
     print("dataset\ttoken_size\tpattern\tK\tqtd\ttotal\n")
-    # cloze_model.top_k(pairs, patterns[:1])
+    # cloze_model.top_k("testes", pairs, patterns[:1])
 
     for file_dataset in os.listdir(eval_path):
         if os.path.isfile(os.path.join(eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
