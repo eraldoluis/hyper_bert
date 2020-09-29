@@ -374,6 +374,59 @@ class ClozeBert:
 
         return size
 
+
+    def top_k(self, dataset_name, dataset, pattern_list):
+        dataset_by_token_size = {}
+        logger.info("Contando subtoken")
+        for pair in dataset:
+            hypo_size, hyper_size = self.get_len_subtoken(pair[:2])
+            hypo_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
+            hyper_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
+            tokens = hypo_tokenize + hyper_tokenize
+            if (hypo_size, hyper_size) in dataset_by_token_size:
+                dataset_by_token_size[(hypo_size, hyper_size)].append(tokens)
+            else:
+                dataset_by_token_size[(hypo_size, hyper_size)] = []
+                dataset_by_token_size[(hypo_size, hyper_size)].append(tokens)
+
+
+        for size in dataset_by_token_size.keys():
+            for pattern in pattern_list:
+                sentence = pattern.format(("[MASK]" * size[0]).strip(), ("[MASK]" * size[1]).strip())
+                sentence_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(sentence))
+                sentence_tokenize = self.tokenizer.build_inputs_with_special_tokens(sentence_tokenize)
+                idx_tensor = torch.tensor([x for x, y in enumerate(sentence_tokenize) if y == self.tokenizer.mask_token_id])
+
+                with torch.no_grad():
+                    idx_tensor = torch.tensor([x for x, y in enumerate(sentence_tokenize) if y == self.tokenizer.mask_token_id])
+                    sentence_tensor = torch.tensor([sentence_tokenize], device=self.device)
+                    outputs = self.model(sentence_tensor)  # , segments_tensors)
+                    # shape predict (2*dataset_words, sentence_len, vocab_bert)
+                predict = outputs[0]
+                values, idx_token = torch.sort(predict, dim=2, descending=True)
+                max_k = predict.shape[-1]
+                # max_k = 5
+
+                dataset_token_size = torch.tensor(dataset_by_token_size[size])
+                for k in range(1, max_k):
+                    idx_sorted = idx_token[:,:,:k]
+                    idx = idx_sorted[0, idx_tensor]
+                    len_token, _ = idx.shape
+                    compare_sum = []
+                    for i in range(len_token):
+                        compare = torch.eq(idx[i].view(1,-1) ,dataset_token_size[:,i].view(-1,1))
+                        compare_sum.append(compare.sum().item())
+                    if all(i == compare_sum[0] for i in compare_sum):
+                        print(f"{dataset_name}\t{size}\t{pattern}\t{k}\t{compare_sum[0]}\t{dataset_token_size.shape[0]}\n")
+                        if compare_sum[0] == dataset_token_size.shape[0]:
+                            logger.info(f"Tamanho {size} terminou!")
+                            break
+
+        for k,v in dataset_by_token_size.items():
+            logger.info(f"{k}, len= {len(v)}")
+
+        return dataset_by_token_size
+
 def load_eval_file(f_in):
     eval_data = []
     for line in f_in:
@@ -398,6 +451,46 @@ def save_bert_file(dict, output, dataset_name, model_name, hyper_num, oov_num, f
     f.close()
 
 
+def main2():
+    model_name = "neuralmind/bert-base-portuguese-cased"
+    eval_path = "/home/gabrielescobar/dive-pytorch/datasets"
+    logger.info("Iniciando bert...")
+    cloze_model = ClozeBert(model_name)
+
+    patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+
+    # 2018 RoolerEtal - Hearst Patterns Revisited
+    patterns2 = ["{} que é um exemplo de {}", "{} que é uma classe de {}", "{} que é um tipo de {}",
+                 "{} e qualquer outro {}", "{} e algum outro {}", "{} ou qualquer outro {}", "{} ou algum outro {}",
+                 "{} que é chamado de {}",
+                 "{} é um caso especial de {}",
+                 "{} incluindo {}"]
+    # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
+
+    patterns.extend(patterns2)
+
+    pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
+             ['banana', 'abacate', 'False', 'random'], ['comida','projeto','False','random'],
+             ['urânio','elemento','True','hyper'], ['usuário','cliente','True','hyper']
+             ]
+
+    pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
+                     ['acidente', 'acontecimento', 'True', 'hyper'],
+                     ['pessoa', 'discurso', 'False', 'random']]
+                     # ['pessoa', 'discurso', 'False', 'random'],
+                     # ["banana", "fruta", "True", "hyper"]]
+    print("dataset\ttoken_size\tpattern\tK\tqtd\ttotal\n")
+    # cloze_model.top_k(pairs, patterns[:1])
+
+    for file_dataset in os.listdir(eval_path):
+        if os.path.isfile(os.path.join(eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
+            with open(os.path.join(eval_path, file_dataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                ds_s = cloze_model.top_k(file_dataset, eval_data, patterns)
+
+    return cloze_model
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model_name", type=str, help="path to bert models", required=True)
@@ -416,13 +509,13 @@ def main():
     args = parser.parse_args()
     print("Iniciando bert...")
     cloze_model = ClozeBert(args.model_name, args.zscore_exp)
-    try:
-        os.mkdir(os.path.join(args.output_path, args.model_name.replace("/", "-")))
-    except:
-        pass
-
-    f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
-    f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
+    # try:
+    #     os.mkdir(os.path.join(args.output_path, args.model_name.replace("/", "-")))
+    # except:
+    #     pass
+    #
+    # f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
+    # f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
     patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
 
@@ -473,31 +566,32 @@ def main():
     # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
     #                f_out, args.include_oov)
     # logger.info(f"result_size={len(result)}")
-    print(args)
+    # print(args)
 
-    for file_dataset in os.listdir(args.eval_path):
-        if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
-            with open(os.path.join(args.eval_path, file_dataset)) as f_in:
-                logger.info("Loading dataset ...")
-                eval_data = load_eval_file(f_in)
-                vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-                # com bert score
-                if args.bert_score:
-                    logger.info(f"Run BERT score = {args.bert_score}")
-                    result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-                # com zscore
-                if args.zscore or args.zscore_exp:
-                    logger.info(f"Run Z Score = {args.zscore}")
-                    result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-                # com log_softmax
-                if args.logsoftmax:
-                    logger.info(f"Run Log Softmax = {args.logsoftmax}")
-                    result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-
-                save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
-                               oov_num, f_out, args.include_oov)
-                logger.info(f"result_size={len(result)}")
-    f_out.close()
+    # for file_dataset in os.listdir(args.eval_path):
+    #     if os.path.isfile(os.path.join(args.eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
+    #         with open(os.path.join(args.eval_path, file_dataset)) as f_in:
+    #             logger.info("Loading dataset ...")
+    #             eval_data = load_eval_file(f_in)
+    #             ds_s = cloze_model.top_k(eval_data, patterns)
+    #             # vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
+    #             # # com bert score
+    #             # if args.bert_score:
+    #             #     logger.info(f"Run BERT score = {args.bert_score}")
+    #             #     result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+    #             # # com zscore
+    #             # if args.zscore or args.zscore_exp:
+    #             #     logger.info(f"Run Z Score = {args.zscore}")
+    #             #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+    #             # # com log_softmax
+    #             # if args.logsoftmax:
+    #             #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+    #             #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+    #             #
+    #             # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
+    #             #                oov_num, f_out, args.include_oov)
+    #             # logger.info(f"result_size={len(result)}")
+    # f_out.close()
     logger.info("Done")
     print("Done!")
 
@@ -533,8 +627,8 @@ def subtoken_size():
     return cloze_model
 
 if __name__ == "__main__":
-    # main()
-    m = subtoken_size()
+    m = main2()
+    # m = subtoken_size()
 
 '''
 size tokens dataset  = 2723
