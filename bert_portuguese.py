@@ -405,10 +405,10 @@ class ClozeBert:
                 predict = outputs[0]
                 values, idx_token = torch.sort(predict, dim=2, descending=True)
                 max_k = predict.shape[-1]
-                # max_k = 5
 
                 dataset_token_size = torch.tensor(dataset_by_token_size[size], device=self.device)
-                for k in range(1, max_k):
+
+                for k in range(1, max_k+1):
                     idx_sorted = idx_token[:,:,:k]
                     idx = idx_sorted[0, idx_tensor]
                     len_token, _ = idx.shape
@@ -482,15 +482,15 @@ def main2():
                      # ['pessoa', 'discurso', 'False', 'random'],
                      # ["banana", "fruta", "True", "hyper"]]
     print("dataset\ttoken_size\tpattern\tK\tqtd\ttotal\n")
-    # cloze_model.top_k("testes", pairs, patterns[:1])
+    cloze_model.top_k("testes", pairs, patterns[:1])
 
-    for file_dataset in os.listdir(eval_path):
-        if os.path.isfile(os.path.join(eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
-            with open(os.path.join(eval_path, file_dataset)) as f_in:
-                logger.info("Loading dataset ...")
-                eval_data = load_eval_file(f_in)
-                ds_s = cloze_model.top_k(file_dataset, eval_data, patterns)
-
+    # for file_dataset in os.listdir(eval_path):
+    #     if os.path.isfile(os.path.join(eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
+    #         with open(os.path.join(eval_path, file_dataset)) as f_in:
+    #             logger.info("Loading dataset ...")
+    #             eval_data = load_eval_file(f_in)
+    #             ds_s = cloze_model.top_k(file_dataset, eval_data, patterns)
+    logger.info("Done!")
     return cloze_model
 
 def main():
