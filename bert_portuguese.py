@@ -92,7 +92,7 @@ class ClozeBert:
                 words_probs_s[" ".join(row)][pattern].append(predict_hypon.cpu().numpy().tolist())
                 words_probs_s[" ".join(row)][pattern].append(predict_hyper.cpu().numpy().tolist())
 
-        return words_probs_s, hyper_num, oov
+        return words_probs_s
 
 
     def sentence_score(self, patterns, dataset, vocab_dive, vocab_tokens):
@@ -562,33 +562,33 @@ def main():
     #         word, count = line.strip().split()
     #         dive_vocab.append(word)
 
-    # # Testes
-    # print(f"dataset=TESTE size={len(pairs_token_1)}")
-    # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # # if args.zscore or args.zscore_exp:
-    # #     logger.info(f"Run Z Score = {args.zscore}")
-    # #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
-    # #     # com zscore
-    # #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    # # #
-    # # if args.logsoftmax:
-    # #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
-    # #     # bert score
-    # #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # Testes
+    print(f"dataset=TESTE size={len(pairs_token_1)}")
+    vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
+    # if args.zscore or args.zscore_exp:
+    #     logger.info(f"Run Z Score = {args.zscore}")
+    #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
+    #     # com zscore
+    #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # #
-    # if args.bert_score:
-    #     logger.info(f"Run BERT score = {args.bert_score}")
-    #     # com bert score
-    #     result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), hyper_total, oov_num,
-    #                f_out, args.include_oov)
-    # logger.info(f"result_size={len(result)}")
-    # print(args)
-    # f_out.close()
-    # sys.exit(0)
+    # if args.logsoftmax:
+    #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+    #     # bert score
+    #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    #
+    if args.bert_score:
+        logger.info(f"Run BERT score = {args.bert_score}")
+        # com bert score
+        result = cloze_model.bert_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), 0, 0,
+                   f_out, args.include_oov)
+    logger.info(f"result_size={len(result)}")
+    print(args)
+    f_out.close()
+    sys.exit(0)
 
     for file_dataset in os.listdir(args.eval_path):
-        if os.path.isfile(os.path.join(args.eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
+        if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
             with open(os.path.join(args.eval_path, file_dataset)) as f_in:
                 logger.info("Loading dataset ...")
                 eval_data = load_eval_file(f_in)
@@ -597,7 +597,9 @@ def main():
                 # com bert score
                 if args.bert_score:
                     logger.info(f"Run BERT score = {args.bert_score}")
-                    result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                    result = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                    hyper_total = 0
+                    oov_num = 0
                 # # com zscore
                 # if args.zscore or args.zscore_exp:
                 #     logger.info(f"Run Z Score = {args.zscore}")
@@ -607,8 +609,8 @@ def main():
                 #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
                 #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
                 #
-                # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
-                #                oov_num, f_out, args.include_oov)
+                save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
+                               oov_num, f_out, args.include_oov)
                 # logger.info(f"result_size={len(result)}")
     f_out.close()
     logger.info("Done")
