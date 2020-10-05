@@ -8,6 +8,7 @@ import random
 import json
 import os
 import itertools
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -69,27 +70,12 @@ class ClozeBert:
 
     def bert_sentence_score(self, patterns, dataset, vocab_dive, vocab_tokens):
         words_probs_s = {}
-        hyper = True
-        oov = 0
-        hyper_num = 0
         for row in dataset:
             pair = row[0:2]
-            if (not self.include_oov) and (pair[0] not in vocab_dive or pair[1] not in vocab_dive):
-                oov += 1
-                # par nao está no vocab do dive e calculo NÃO deverá incluí-lo
-                continue
-
             words_probs_s[" ".join(row)] = {}
-            if row[3] == "hyper":
-                hyper_num += 1
-
             for pattern in patterns:
-                sentences, idx_h, idx_mask = self.build_sentences(pattern, pair)
-                idx_all = idx_h[0].copy()
-                idx_all.extend(idx_h[1])
-                hyponym_idx, hypernym_idx = idx_h[0], idx_h[1]
-                sentences_hyponym = sentences[:len(hyponym_idx)]
-                sentences_hypernym = sentences[-len(hypernym_idx):]
+                sentences, hyponym_idx, hypernym_idx, idx_mask = self.build_sentences_n_subtoken(pattern, pair)
+                idx_all = hyponym_idx + hypernym_idx
                 logger.info("Predicting...")
                 self.model.eval()
                 with torch.no_grad():
@@ -99,8 +85,8 @@ class ClozeBert:
                 predict = outputs[0]
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
 
-                predict_hypon = predict[:len(idx_h[0])]
-                predict_hyper = predict[- len(idx_h[1]):]
+                predict_hypon = predict[:len(hyponym_idx)]
+                predict_hyper = predict[-len(hypernym_idx):]
 
                 words_probs_s[" ".join(row)][pattern] = []
                 words_probs_s[" ".join(row)][pattern].append(predict_hypon.cpu().numpy().tolist())
@@ -351,6 +337,35 @@ class ClozeBert:
         return sentences, ids, idx_masks
 
 
+    def build_sentences_n_subtoken(self, pattern, pair):
+        logger.info("Tokenizing...")
+        hyponym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
+        hypernym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
+        pattern_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pattern.format("", "").strip()))
+
+        sentences = []
+
+        # mask hyponym
+        for i, token_in in enumerate(hyponym_tokenize):
+            temp = hyponym_tokenize.copy()
+            temp[i] = self.tokenizer.mask_token_id
+            sentences.append([self.tokenizer.cls_token_id] + temp + pattern_tokenize + hypernym_tokenize +
+                             [self.tokenizer.sep_token_id])
+
+        # mask hypernym
+        for i, token_in in enumerate(hypernym_tokenize):
+            temp = hypernym_tokenize.copy()
+            temp[i] = self.tokenizer.mask_token_id
+            sentences.append([self.tokenizer.cls_token_id] + hyponym_tokenize + pattern_tokenize + temp +
+                             [self.tokenizer.sep_token_id])
+
+        #get mask_idx
+        idx = []
+        for sentence in sentences:
+            idx.append(sentence.index(self.tokenizer.mask_token_id))
+
+        return sentences, hyponym_tokenize, hypernym_tokenize, idx
+
     def get_tokens_dataset(self, pairs_token_1):
         vocab = []
         for data in pairs_token_1:
@@ -511,13 +526,13 @@ def main():
     args = parser.parse_args()
     print("Iniciando bert...")
     cloze_model = ClozeBert(args.model_name, args.zscore_exp)
-    # try:
-    #     os.mkdir(os.path.join(args.output_path, args.model_name.replace("/", "-")))
-    # except:
-    #     pass
-    #
-    # f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
-    # f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
+    try:
+        os.mkdir(os.path.join(args.output_path, args.model_name.replace("/", "-")))
+    except:
+        pass
+
+    f_out = open(os.path.join(args.output_path, args.model_name.replace('/', '-'), "info.tsv"), mode="a")
+    f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
     patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
 
@@ -534,11 +549,11 @@ def main():
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
 
-    pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
+    pairs_token_1 = [["banana", "fruta", "True", "hyper"],
+                     ['acampamento', 'lugar', 'True', 'hyper'],
                      ['acidente', 'acontecimento', 'True', 'hyper'],
+                     ['pessoa', 'discurso', 'False', 'random'],
                      ['pessoa', 'discurso', 'False', 'random']]
-                     # ['pessoa', 'discurso', 'False', 'random'],
-                     # ["banana", "fruta", "True", "hyper"]]
 
     # logger.info("Loading vocab dive ...")
     # dive_vocab = []
@@ -550,17 +565,17 @@ def main():
     # # Testes
     # print(f"dataset=TESTE size={len(pairs_token_1)}")
     # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # if args.zscore or args.zscore_exp:
-    #     logger.info(f"Run Z Score = {args.zscore}")
-    #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
-    #     # com zscore
-    #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # # if args.zscore or args.zscore_exp:
+    # #     logger.info(f"Run Z Score = {args.zscore}")
+    # #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
+    # #     # com zscore
+    # #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # # #
+    # # if args.logsoftmax:
+    # #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+    # #     # bert score
+    # #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # #
-    # if args.logsoftmax:
-    #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
-    #     # bert score
-    #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    #
     # if args.bert_score:
     #     logger.info(f"Run BERT score = {args.bert_score}")
     #     # com bert score
@@ -569,31 +584,33 @@ def main():
     #                f_out, args.include_oov)
     # logger.info(f"result_size={len(result)}")
     # print(args)
-
-    # for file_dataset in os.listdir(args.eval_path):
-    #     if os.path.isfile(os.path.join(args.eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
-    #         with open(os.path.join(args.eval_path, file_dataset)) as f_in:
-    #             logger.info("Loading dataset ...")
-    #             eval_data = load_eval_file(f_in)
-    #             ds_s = cloze_model.top_k(eval_data, patterns)
-    #             # vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-    #             # # com bert score
-    #             # if args.bert_score:
-    #             #     logger.info(f"Run BERT score = {args.bert_score}")
-    #             #     result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-    #             # # com zscore
-    #             # if args.zscore or args.zscore_exp:
-    #             #     logger.info(f"Run Z Score = {args.zscore}")
-    #             #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-    #             # # com log_softmax
-    #             # if args.logsoftmax:
-    #             #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
-    #             #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-    #             #
-    #             # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
-    #             #                oov_num, f_out, args.include_oov)
-    #             # logger.info(f"result_size={len(result)}")
     # f_out.close()
+    # sys.exit(0)
+
+    for file_dataset in os.listdir(args.eval_path):
+        if os.path.isfile(os.path.join(args.eval_path, file_dataset)) and file_dataset != 'ontoPT-test.tsv':
+            with open(os.path.join(args.eval_path, file_dataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                vocab_dataset_tokens = []
+                # vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
+                # com bert score
+                if args.bert_score:
+                    logger.info(f"Run BERT score = {args.bert_score}")
+                    result, hyper_total, oov_num = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                # # com zscore
+                # if args.zscore or args.zscore_exp:
+                #     logger.info(f"Run Z Score = {args.zscore}")
+                #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                # # com log_softmax
+                # if args.logsoftmax:
+                #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+                #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                #
+                # save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
+                #                oov_num, f_out, args.include_oov)
+                # logger.info(f"result_size={len(result)}")
+    f_out.close()
     logger.info("Done")
     print("Done!")
 
@@ -629,8 +646,9 @@ def subtoken_size():
     return cloze_model
 
 if __name__ == "__main__":
-    m = main2()
+    # m = main2()
     # m = subtoken_size()
+    main()
 
 '''
 size tokens dataset  = 2723
