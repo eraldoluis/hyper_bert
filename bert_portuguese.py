@@ -570,6 +570,38 @@ def main2():
     logger.info("Done!")
     return cloze_model
 
+
+def subtoken_size():
+    print("Iniciando bert...")
+    model_name = "neuralmind/bert-base-portuguese-cased"
+    cloze_model = ClozeBert(model_name)
+    out_path = "results/subtoken_size/subtoken_dataset.tsv"
+    dataset_path = "/home/gabrielescobar/Documentos/dive-pytorch/datasets"
+    f_out = open(out_path, encoding="utf-8", mode="w")
+    f_out.write("model\tdataset\tsubtoken\tN\n")
+
+    pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
+                     ['acidente', 'acontecimento', 'True', 'hyper'],
+                     ['pessoa', 'discurso', 'False', 'random'],
+                     ['pessoa', 'discurso', 'False', 'random'],
+                     ["banana", "fruta", "True", "hyper"]]
+
+
+    for file_dataset in os.listdir(dataset_path):
+        if os.path.isfile(os.path.join(dataset_path, file_dataset)):
+            with open(os.path.join(dataset_path, file_dataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                size = cloze_model.subtoken_dataset(eval_data)
+                for i in range(len(size)):
+                    for j in range(len(size)):
+                        if size[i][j] != 0:
+                            f_out.write(f"{model_name}\t{file_dataset}\t{i},{j}\t{size[i][j]}\n")
+
+    f_out.close()
+    return cloze_model
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model_name", type=str, help="path to bert models", required=True)
@@ -624,90 +656,60 @@ def main():
     #         word, count = line.strip().split()
     #         dive_vocab.append(word)
 
-    # Testes
-    print(f"dataset=TESTE size={len(pairs_token_1)}")
-    vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
-    # if args.zscore or args.zscore_exp:
-    #     logger.info(f"Run Z Score = {args.zscore}")
-    #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
-    #     # com zscore
-    #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # # Testes
+    # print(f"dataset=TESTE size={len(pairs_token_1)}")
+    # vocab_dataset_tokens = cloze_model.get_tokens_dataset(pairs_token_1)
+    # # if args.zscore or args.zscore_exp:
+    # #     logger.info(f"Run Z Score = {args.zscore}")
+    # #     logger.info(f"Run Z Score_EXP = {args.zscore_exp}")
+    # #     # com zscore
+    # #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
+    # # #
+    # # if args.logsoftmax:
+    # #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+    # #     # bert score
+    # #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
     # #
-    # if args.logsoftmax:
-    #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
-    #     # bert score
-    #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, pairs_token_1, [], vocab_dataset_tokens)
-    #
-    if args.bert_score:
-        logger.info(f"Run BERT score = {args.bert_score}")
-        # com bert score
-        result = cloze_model.bert_sentence_score_2(patterns, pairs_token_1, [], [])
-    save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), 0, 0,
-                   f_out, args.include_oov)
-    logger.info(f"result_size={len(result)}")
-    print(args)
-    f_out.close()
-    sys.exit(0)
-
-    # for file_dataset in os.listdir(args.eval_path):
-    #     if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
-    #         with open(os.path.join(args.eval_path, file_dataset)) as f_in:
-    #             logger.info("Loading dataset ...")
-    #             eval_data = load_eval_file(f_in)
-    #             vocab_dataset_tokens = []
-    #             # vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
-    #             # com bert score
-    #             if args.bert_score:
-    #                 logger.info(f"Run BERT score = {args.bert_score}")
-    #                 result = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-    #                 hyper_total = 0
-    #                 oov_num = 0
-    #             # # com zscore
-    #             # if args.zscore or args.zscore_exp:
-    #             #     logger.info(f"Run Z Score = {args.zscore}")
-    #             #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-    #             # # com log_softmax
-    #             # if args.logsoftmax:
-    #             #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
-    #             #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
-    #             #
-    #             save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
-    #                            oov_num, f_out, args.include_oov)
-    #             # logger.info(f"result_size={len(result)}")
+    # if args.bert_score:
+    #     logger.info(f"Run BERT score = {args.bert_score}")
+    #     # com bert score
+    #     result = cloze_model.bert_sentence_score_2(patterns, pairs_token_1, [], [])
+    # save_bert_file(result, args.output_path, "TESTE", args.model_name.replace('/', '-'), 0, 0,
+    #                f_out, args.include_oov)
+    # logger.info(f"result_size={len(result)}")
+    # print(args)
     # f_out.close()
+    # sys.exit(0)
+
+    for file_dataset in os.listdir(args.eval_path):
+        if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
+            with open(os.path.join(args.eval_path, file_dataset)) as f_in:
+                logger.info("Loading dataset ...")
+                eval_data = load_eval_file(f_in)
+                vocab_dataset_tokens = []
+                # vocab_dataset_tokens = cloze_model.get_tokens_dataset(eval_data)
+                # com bert score
+                if args.bert_score:
+                    logger.info(f"Run BERT score = {args.bert_score}")
+                    result = cloze_model.bert_sentence_score_2(patterns, eval_data, [], vocab_dataset_tokens)
+                    hyper_total = 0
+                    oov_num = 0
+                # # com zscore
+                # if args.zscore or args.zscore_exp:
+                #     logger.info(f"Run Z Score = {args.zscore}")
+                #     result, hyper_total, oov_num = cloze_model.z_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                # # com log_softmax
+                # if args.logsoftmax:
+                #     logger.info(f"Run Log Softmax = {args.logsoftmax}")
+                #     result, hyper_total, oov_num = cloze_model.sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                #
+                save_bert_file(result, args.output_path, file_dataset, args.model_name.replace('/', '-'), hyper_total,
+                               oov_num, f_out, args.include_oov)
+                # logger.info(f"result_size={len(result)}")
+    f_out.close()
     logger.info("Done")
     print("Done!")
 
-
-def subtoken_size():
-    print("Iniciando bert...")
-    model_name = "neuralmind/bert-base-portuguese-cased"
-    cloze_model = ClozeBert(model_name)
-    out_path = "results/subtoken_size/subtoken_dataset.tsv"
-    dataset_path = "/home/gabrielescobar/Documentos/dive-pytorch/datasets"
-    f_out = open(out_path, encoding="utf-8", mode="w")
-    f_out.write("model\tdataset\tsubtoken\tN\n")
-
-    pairs_token_1 = [['acampamento', 'lugar', 'True', 'hyper'],
-                     ['acidente', 'acontecimento', 'True', 'hyper'],
-                     ['pessoa', 'discurso', 'False', 'random'],
-                     ['pessoa', 'discurso', 'False', 'random'],
-                     ["banana", "fruta", "True", "hyper"]]
-
-
-    for file_dataset in os.listdir(dataset_path):
-        if os.path.isfile(os.path.join(dataset_path, file_dataset)):
-            with open(os.path.join(dataset_path, file_dataset)) as f_in:
-                logger.info("Loading dataset ...")
-                eval_data = load_eval_file(f_in)
-                size = cloze_model.subtoken_dataset(eval_data)
-                for i in range(len(size)):
-                    for j in range(len(size)):
-                        if size[i][j] != 0:
-                            f_out.write(f"{model_name}\t{file_dataset}\t{i},{j}\t{size[i][j]}\n")
-
-    f_out.close()
-    return cloze_model
 
 if __name__ == "__main__":
     # m = main2()
