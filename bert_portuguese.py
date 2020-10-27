@@ -691,7 +691,7 @@ def main():
                 # com bert score
                 if args.bert_score:
                     logger.info(f"Run BERT score = {args.bert_score}")
-                    result = cloze_model.bert_sentence_score_2(patterns, eval_data, [], vocab_dataset_tokens)
+                    result = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
                     hyper_total = 0
                     oov_num = 0
                 # # com zscore
