@@ -629,6 +629,7 @@ def main():
     f_out.write("model\tdataset\tN\toov\thyper_num\tinclude_oov\n")
 
     patterns = ["{} é um tipo de {}", "{} é um {}", "{} e outros {}", "{} ou outro {}", "{} , um {}"]
+    en_patterns = ["{} is a type of {}", "{} is a {}", "{} and others {}", "{} or others {}", "{} , a {}"]
 
     # 2018 RoolerEtal - Hearst Patterns Revisited
     patterns2 = ["{} que é um exemplo de {}", "{} que é uma classe de {}", "{} que é um tipo de {}",
@@ -636,9 +637,15 @@ def main():
                  "{} que é chamado de {}",
                  "{} é um caso especial de {}",
                  "{} incluindo {}"]
-    # patterns = ["[MASK] é um tipo de [MASK]", "[MASK] é um [MASK]"]
+
+    en_pattern2 = ["{} which is a example of {}", "{} which is a class of {}", "{} which is kind of {}",
+                    "{} and any other {}", "{} and some other {}", "{} or any other {}", "{} or some other {}",
+                    "{} which is called {}",
+                    "{} a special case of {}",
+                    "{} including {}"]
 
     patterns.extend(patterns2)
+    en_patterns.extend(en_pattern2)
 
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
@@ -691,7 +698,7 @@ def main():
                 # com bert score
                 if args.bert_score:
                     logger.info(f"Run BERT score = {args.bert_score}")
-                    result = cloze_model.bert_sentence_score(patterns, eval_data, [], vocab_dataset_tokens)
+                    result = cloze_model.bert_sentence_score(en_patterns, eval_data, [], vocab_dataset_tokens)
                     hyper_total = 0
                     oov_num = 0
                 # # com zscore
