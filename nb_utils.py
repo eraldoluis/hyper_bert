@@ -107,7 +107,7 @@ def compute_dataframe_AP_by_pattern(df, key_sort, pattern_list):
                 prec_list.append(hyper_num / float(total_pair))
 
         ap_by_pattern[p] = np.mean(prec_list)
-    return pd.DataFrame(data={'padrao': pattern_unique, 'AP': list(ap_by_pattern.values())})
+    return pd.DataFrame(data={'padrao': pattern_list, 'AP': list(ap_by_pattern.values())})
 
 
 # compute ap in sorted list
