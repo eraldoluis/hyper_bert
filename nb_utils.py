@@ -71,20 +71,23 @@ def filter_by_vocab(path_vocab, dict_data):
 # devolve df de balanceamento True/False por tamanho de subtoken
 def balanceamento(df, len_size, patterns):
     df_rate = df[df['pattern'] == patterns[0]][['hiponimo', 'hiperonimo', 'classe', 'fonte', 'len_total']]
-    df_rate = df_rate.groupby(['len_total'])['classe'].value_counts()
+    df_rate = df_rate.groupby(['len_total'])['fonte'].value_counts()
 
     dict_values = {'len_total': [], 'true': [], 'false': []}
     for v in len_size:
         if v in df_rate:
             dict_values['len_total'].append(v)
-            if "True" in df_rate[v]:
-                dict_values['true'].append(df_rate[v]['True'])
+
+            if "hyper" in df_rate[v]:
+                true_num = df_rate[v]['hyper']
+                dict_values['true'].append(true_num)
             else:
-                dict_values['true'].append(0)
-            if "False" in df_rate[v]:
-                dict_values['false'].append(df_rate[v]['False'])
-            else:
-                dict_values['false'].append(0)
+                true_num = 0
+                dict_values['true'].append(true_num)
+            # false é o resto
+            false_num = df_rate[v].sum() - true_num
+            dict_values['false'].append(false_num)
+
         else:
             print(f"Balanceamento: {v} não está no dataframe!")
 

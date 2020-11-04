@@ -81,6 +81,51 @@ class ClozeBert:
 
         return words_probs_s
 
+    def bert_sentence_score_multi_pattern_one_sentence(self, patterns, dataset):
+        perm_pattern = []
+        for i in range(2, len(patterns) + 1):
+            tmp_p = list(map(list, itertools.permutations(patterns, r=i)))
+            perm_pattern.extend(tmp_p)
+        words_probs_s = {}
+        for row in dataset:
+            pair = row[0:2]
+            words_probs_s[" ".join(row)] = {}
+            for pattern_list in perm_pattern:
+                pattern = " . ".join(pattern_list)
+                sentences, hyponym_idx, hypernym_idx, idx_mask, idx_all= self.build_sentences_n_subtoken_multi_pattern_one_sentence(
+                    pattern_list, pair)
+                segments_ids = [[0] * len(sentences[0])] * len(sentences)
+                idx_all = hyponym_idx + hypernym_idx
+                idx_all = idx_all * 2
+                logger.info("Predicting...")
+                self.model.eval()
+                with torch.no_grad():
+                    examples = torch.tensor(sentences, device=self.device)
+                    segments_tensors = torch.tensor(segments_ids, device=self.device)
+                    # segments_tensors = torch.tensor([segments_ids])
+                    outputs = self.model(examples, token_type_ids=segments_tensors)  # , segments_tensors)
+                predict = outputs[0]
+                predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
+
+                #falta essa parte
+                size = 0
+                hipo_1stsen = predict[size:len(hyponym_idx)]
+                size += len(hipo_1stsen)
+                hiper_1stsen = predict[size:size + len(hypernym_idx)]
+                size += len(hiper_1stsen)
+                hipo_2ndsen = predict[size:size + len(hyponym_idx)]
+                size += len(hipo_2ndsen)
+                hiper_2ndsen = predict[size:size + len(hypernym_idx)]
+
+                # [[hipo 1st sen], [hipo 2nd sen], [hyper 1st sen], [hyper 2nd sen]]
+                words_probs_s[" ".join(row)]["_".join(pattern_list)] = []
+                words_probs_s[" ".join(row)]["_".join(pattern_list)].append(hipo_1stsen.cpu().numpy().tolist())
+                words_probs_s[" ".join(row)]["_".join(pattern_list)].append(hipo_2ndsen.cpu().numpy().tolist())
+                words_probs_s[" ".join(row)]["_".join(pattern_list)].append(hiper_1stsen.cpu().numpy().tolist())
+                words_probs_s[" ".join(row)]["_".join(pattern_list)].append(hiper_2ndsen.cpu().numpy().tolist())
+
+        return words_probs_s
+
     def bert_sentence_score_multi_pattern(self, patterns, dataset):
         perm_pattern = list(map(list, itertools.permutations(patterns, r=2)))
         words_probs_s = {}
@@ -177,6 +222,49 @@ class ClozeBert:
         seg = [seg0 + seg1] * len(sentences)
 
         return sentences, hyponym_tokenize, hypernym_tokenize, idx, seg
+
+
+    def build_sentences_n_subtoken_multi_pattern_one_sentence(self, patterns_list, pair):
+        logger.info("Tokenizing...")
+        hyponym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
+        hypernym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
+        dot_token = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize("."))
+
+        patterns_tokenize = []
+        for p in patterns_list:
+            p_tokenize = self.tokenizer.convert_tokens_to_ids(
+                self.tokenizer.tokenize(p.format("", "").strip()))
+            tmp_tokenize = hyponym_tokenize + p_tokenize + hypernym_tokenize
+            patterns_tokenize.append(tmp_tokenize)
+
+        # sentences.len == patterns_list
+        sentence = [self.tokenizer.cls_token_id]
+        for p in patterns_tokenize:
+            sentence = sentence + p + dot_token
+        sentence = sentence[:-1]
+        sentence = sentence + [self.tokenizer.sep_token_id]
+
+        # find ids
+        idx = []
+        for i_num, i in enumerate(sentence):
+            if i in hyponym_tokenize or i in hypernym_tokenize:
+                idx.append(i_num)
+
+        # check
+        try:
+            assert len(idx) == (len(hypernym_tokenize) + len(hyponym_tokenize)) * len(patterns_list)
+        except AssertionError:
+            logger.info("Provavel erro quando mascára os tokens")
+            raise AssertionError
+
+        sentences = []
+        idx_all = []
+        for i in idx:
+            sen_temp = sentence.copy()
+            idx_all.append(sen_temp[i])
+            sen_temp[i] = self.tokenizer.mask_token_id
+            sentences.append(sen_temp)
+        return sentences, hyponym_tokenize, hypernym_tokenize, [idx] * len(sentences), idx_all
 
     def build_sentences_n_subtoken(self, pattern, pair):
         logger.info("Tokenizing...")
@@ -289,8 +377,10 @@ def main():
     patterns.extend(patterns2)
     en_patterns.extend(en_pattern2)
 
-    en_best_patterns = ['{} or some other {}', '{} or any other {}', '{} and any other {}', '{} is a type of {}', '{} and some other {}', '{} which is kind of {}', '{} a special case of {}', '{} is a {}', '{} which is a example of {}', '{} and others {}', '{} which is called {}', '{} which is a class of {}', '{} or others {}', '{} , a {}', '{} including {}']
-
+    en_best_patterns = ['{} or some other {}', '{} or any other {}', '{} and any other {}', '{} is a type of {}',
+                        '{} and some other {}', '{} which is kind of {}', '{} a special case of {}', '{} is a {}',
+                        '{} which is a example of {}', '{} and others {}', '{} which is called {}',
+                        '{} which is a class of {}', '{} or others {}', '{} , a {}', '{} including {}']
 
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
@@ -301,34 +391,34 @@ def main():
                      ['pessoa', 'discurso', 'False', 'random']]
 
     # Testes
-    # print(f"dataset=TESTE size={len(pairs_token_1)}")
-    # if args.bert_score:
-    #     logger.info(f"Run BERT score = {args.bert_score}")
-    #     # com bert score
-    #     result = cloze_model.bert_sentence_score_multi_pattern(patterns[:3], pairs_token_1)
-    # else:
-    #     result = {}
-    # save_bert_file(result, args.output_path, "TESTE", args.model_name, 0, 0, f_out, dir_name, True)
-    # logger.info(f"result_size={len(result)}")
-    # print(args)
-    # f_out.close()
-
-    for file_dataset in os.listdir(args.eval_path):
-        if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
-            with open(os.path.join(args.eval_path, file_dataset)) as f_in:
-                logger.info("Loading dataset ...")
-                eval_data = load_eval_file(f_in)
-                if args.bert_score:
-                    logger.info(f"Run BERT score = {args.bert_score}")
-                    result = cloze_model.bert_sentence_score_multi_pattern(en_best_patterns[:4], eval_data)
-                    hyper_total = 0
-                    oov_num = 0
-                save_bert_file(result, args.output_path, file_dataset, args.model_name, hyper_total,
-                               oov_num, f_out, dir_name, True)
-                logger.info(f"result_size={len(result)}")
+    print(f"dataset=TESTE size={len(pairs_token_1)}")
+    if args.bert_score:
+        logger.info(f"Run BERT score = {args.bert_score}")
+        # com bert score
+        result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(patterns[:3], pairs_token_1)
+    else:
+        result = {}
+    save_bert_file(result, args.output_path, "TESTE", args.model_name, 0, 0, f_out, dir_name, True)
+    logger.info(f"result_size={len(result)}")
+    print(args)
     f_out.close()
-    logger.info("Done")
-    print("Done!")
+
+    # for file_dataset in os.listdir(args.eval_path):
+    #     if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
+    #         with open(os.path.join(args.eval_path, file_dataset)) as f_in:
+    #             logger.info("Loading dataset ...")
+    #             eval_data = load_eval_file(f_in)
+    #             if args.bert_score:
+    #                 logger.info(f"Run BERT score = {args.bert_score}")
+    #                 result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(en_best_patterns[:4], eval_data)
+    #                 hyper_total = 0
+    #                 oov_num = 0
+    #             save_bert_file(result, args.output_path, file_dataset, args.model_name, hyper_total,
+    #                            oov_num, f_out, dir_name, True)
+    #             logger.info(f"result_size={len(result)}")
+    # f_out.close()
+    # logger.info("Done")
+    # print("Done!")
 
 
 if __name__ == "__main__":
