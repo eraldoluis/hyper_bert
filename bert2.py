@@ -223,40 +223,46 @@ class ClozeBert:
         dot_token = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize("."))
 
         patterns_tokenize = []
+        idx_list = []
         for p in patterns_list:
             p_tokenize = self.tokenizer.convert_tokens_to_ids(
                 self.tokenizer.tokenize(p.format("", "").strip()))
             tmp_tokenize = hyponym_tokenize + p_tokenize + hypernym_tokenize
+            init_list = list(range(0, len(hyponym_tokenize)))
+            end_id = len(hyponym_tokenize) + len(p_tokenize)
+            end_list = list(range(end_id, end_id + len(hypernym_tokenize)))
+            idx_list.append(init_list + end_list)
             patterns_tokenize.append(tmp_tokenize)
 
-        # sentences.len == patterns_list
         sentence = [self.tokenizer.cls_token_id]
-        for p in patterns_tokenize:
+        len_sentence = 0
+        idx_sentence = []
+        for i, p in enumerate(patterns_tokenize):
+            if len_sentence == 0:
+                idx_sentence += [1 + x for x in idx_list[i]]
+            else:
+                idx_sentence += [len_sentence + x for x in idx_list[i]]
             sentence = sentence + p + dot_token
+            len_sentence = len(sentence)
         sentence = sentence[:-1]
         sentence = sentence + [self.tokenizer.sep_token_id]
 
-        # find ids
-        idx = []
-        for i_num, i in enumerate(sentence):
-            if i in hyponym_tokenize or i in hypernym_tokenize:
-                idx.append(i_num)
-
         # check
         try:
-            assert len(idx) == (len(hypernym_tokenize) + len(hyponym_tokenize)) * len(patterns_list)
+            assert len(idx_sentence) == (len(hypernym_tokenize) + len(hyponym_tokenize)) * len(patterns_list)
         except AssertionError:
             logger.info("Provavel erro quando mascára os tokens")
             raise AssertionError
 
         sentences = []
         idx_all = []
-        for i in idx:
+        for i in idx_sentence:
             sen_temp = sentence.copy()
             idx_all.append(sen_temp[i])
             sen_temp[i] = self.tokenizer.mask_token_id
             sentences.append(sen_temp)
-        return sentences, hyponym_tokenize, hypernym_tokenize, idx, idx_all
+
+        return sentences, hyponym_tokenize, hypernym_tokenize, idx_sentence, idx_all
 
     def build_sentences_n_subtoken(self, pattern, pair):
         logger.info("Tokenizing...")
@@ -387,7 +393,7 @@ def main():
     # if args.bert_score:
     #     logger.info(f"Run BERT score = {args.bert_score}")
     #     # com bert score
-    #     result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(patterns[:3], pairs_token_1)
+    #     result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(en_best_patterns[:3], pairs_token_1)
     # else:
     #     result = {}
     # save_bert_file(result, args.output_path, "TESTE", args.model_name, 0, 0, f_out, dir_name, True)
