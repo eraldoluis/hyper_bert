@@ -104,8 +104,8 @@ class ClozeBert:
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, idx_all]
 
                 hypo = predict[:len(hyponym_idx)]
-                hyper = predict[len(hyponym_idx):len(hyponym_idx) + len(hypernym_idx) -1]
-                rest_hyper = predict[len(hyponym_idx) + len(hypernym_idx) -1:]
+                hyper = predict[len(hyponym_idx):len(hyponym_idx) + len(hypernym_idx) - 1]
+                rest_hyper = predict[len(hyponym_idx) + len(hypernym_idx) - 1:]
 
                 hypo = hypo.cpu().numpy().tolist()
                 hyper = hyper.cpu().numpy().tolist()
@@ -388,6 +388,11 @@ def main():
                         '{} which is a example of {}', '{} and others {}', '{} which is called {}',
                         '{} which is a class of {}', '{} or others {}', '{} , a {}', '{} including {}']
 
+    hypeNet_best_patterns = ['{} or some other {}', '{} or any other {}', '{} and any other {}', '{} is a type of {}',
+                             '{} which is kind of {}', '{} and some other {}', '{} is a {}', '{} a special case of {}',
+                             '{} which is a example of {}', '{} and others {}', '{} which is called {}',
+                             '{} or others {}', '{} which is a class of {}', '{} , a {}', '{} including {}']
+
     pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
              ['banana', 'abacate', 'False', 'random']]
 
@@ -401,15 +406,15 @@ def main():
     # if args.bert_score_dot_comb:
     #     logger.info(f"Run BERT score dot comb= {args.bert_score_dot_comb}")
     #     # com bert score separado com .
-    #     result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(en_best_patterns[:3], pairs_token_1)
+    #     result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(hypeNet_best_patterns[:3], pairs_token_1)
     # elif args.bert_score_sep_comb:
     #     logger.info(f"Run BERT score sep comb= {args.bert_score_sep_comb}")
     #     # com bert score separado com [sep]
-    #     result = cloze_model.bert_sentence_score_multi_pattern(en_best_patterns[:3], pairs_token_1)
+    #     result = cloze_model.bert_sentence_score_multi_pattern(hypeNet_best_patterns[:3], pairs_token_1)
     # elif args.bert_score:
     #     logger.info(f"Run BERT score normal= {args.bert_score}")
     #     # com bert score
-    #     result = cloze_model.bert_sentence_score(en_best_patterns, pairs_token_1)
+    #     result = cloze_model.bert_sentence_score(en_patterns, pairs_token_1)
     # else:
     #     logger.info(f"nenhum método selecionado")
     #     raise ValueError
@@ -418,7 +423,7 @@ def main():
     # logger.info(f"result_size={len(result)}")
     # print(args)
     # f_out.close()
-    comb_n_best = 2
+    comb_n_best = 4
     for file_dataset in os.listdir(args.eval_path):
         if os.path.isfile(os.path.join(args.eval_path, file_dataset)):
             with open(os.path.join(args.eval_path, file_dataset)) as f_in:
@@ -429,19 +434,20 @@ def main():
                     # com bert score separado com .
                     hyper_total = 0
                     oov_num = 0
-                    result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(en_best_patterns[:comb_n_best], eval_data)
+                    result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(hypeNet_best_patterns[:comb_n_best],
+                                                                                        eval_data)
                 elif args.bert_score_sep_comb:
                     logger.info(f"Run BERT score sep comb= {args.bert_score_sep_comb}")
                     # com bert score separado com [sep]
                     hyper_total = 0
                     oov_num = 0
-                    result = cloze_model.bert_sentence_score_multi_pattern(en_best_patterns[:comb_n_best], eval_data)
+                    result = cloze_model.bert_sentence_score_multi_pattern(hypeNet_best_patterns[:comb_n_best], eval_data)
                 elif args.bert_score:
                     logger.info(f"Run BERT score normal= {args.bert_score}")
                     # com bert score normal, usando todos os padrões sem combinar
                     hyper_total = 0
                     oov_num = 0
-                    result = cloze_model.bert_sentence_score(en_best_patterns, eval_data)
+                    result = cloze_model.bert_sentence_score(en_patterns, eval_data)
                 else:
                     logger.info(f"nenhum método selecionado")
                     raise ValueError

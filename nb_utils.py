@@ -19,11 +19,11 @@ method_names = {'word2vec': 'Word2vec C', 'summation_dot_product': 'DIVE \u0394S
 # else
 # [[hipo 1st sen], [hyper 1st sen]]
 
-def create_dataframe(json_dict, combination=False):
+def create_dataframe(json_dict, combination=False, separator=""):
     dict_values = {'hiponimo': [], 'hiperonimo': [], 'classe': [], 'fonte': [], 'pattern': [], 'soma_hipo': [],
                    'soma_hiper': [], 'len_hipo': [], 'len_hiper': []}
     for data, values in json_dict.items():
-        hipo, hiper, classe, fonte = data.strip().split()
+        hipo, hiper, classe, fonte = data.strip().split(separator)
         for pattern, score in values.items():
             dict_values['hiponimo'].append(hipo)
             dict_values['hiperonimo'].append(hiper)
