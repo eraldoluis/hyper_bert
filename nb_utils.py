@@ -1,3 +1,4 @@
+import itertools
 import os
 
 import pandas as pd
@@ -226,7 +227,7 @@ def balanceamento_all(df, patterns):
          'total': [total, 1]})
 
 
-def compute_min_max_ap_normal(df_value, pattern_list, dataset_name, best_pattern_num=4):
+def compute_min_mean_ap_normal(df_value, pattern_list, dataset_name, best_pattern_num=4):
     dfs = []
     method_score = ["score_final_log(z)", "score_final_norm"]
 
@@ -252,5 +253,76 @@ def compute_min_max_ap_normal(df_value, pattern_list, dataset_name, best_pattern
         rename_dataset[k] = os.path.basename(k)
 
     df_all['dataset'] = df_all['dataset'].map(rename_dataset)
+    return df_all
 
+
+def compute_min_mean_ap_sep(df_value, pattern_list, dataset_name, best_pattern_num=4):
+    perm_pattern = list(map(list, itertools.permutations(pattern_list[:best_pattern_num], r=2)))
+    perm_pattern_list = []
+    for i in perm_pattern:
+        perm_pattern_list.append("_".join(i))
+
+    dfs = []
+    method_score = ["score_final_log(z)", "score_final_norm"]
+
+    for score_name in method_score[:1]:
+        n_pair = df_value.groupby('pattern').count().iloc[0]['hiponimo']
+        hyper_num = df_value[df_value['pattern'] == perm_pattern_list[0]]['fonte'].value_counts()
+        hyper_num = hyper_num['hyper']
+        if score_name == "score_final_log(z)":
+            min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
+                                                          best_patterns=perm_pattern_list)
+        else:
+            raise ValueError
+        df = pd.DataFrame(
+            {'dataset': [dataset_name] * 2, 'N': [n_pair] * 2, 'hyper_num': [hyper_num] * 2,
+             'method': [f"min {score_name}", f"mean {score_name}"], 'AP': [min_ap, mean_ap]})
+
+    # df_all = pd.concat([df, df_dive_word2vec])
+    df_all = df
+    df_all['method_format'] = df_all['method'].map(method_names)
+    datasetnames_unique = df_all['dataset'].unique().tolist()
+    rename_dataset = {}
+    for k in datasetnames_unique:
+        rename_dataset[k] = os.path.basename(k)
+
+    df_all['dataset'] = df_all['dataset'].map(rename_dataset)
+    return df_all
+
+
+def compute_min_mean_ap_dot(df_value, pattern_list, dataset_name, best_pattern_num=4):
+    perm_pattern = []
+    pattern = pattern_list[:best_pattern_num]
+    for i in range(2, len(pattern) + 1):
+        tmp_p = list(map(list, itertools.permutations(pattern, r=i)))
+        perm_pattern.extend(tmp_p)
+    perm_pattern_list = []
+    for i in perm_pattern:
+        perm_pattern_list.append("_".join(i))
+
+    dfs = []
+    method_score = ["score_final_log(z)", "score_final_norm"]
+
+    for score_name in method_score[:1]:
+        n_pair = df_value.groupby('pattern').count().iloc[0]['hiponimo']
+        hyper_num = df_value[df_value['pattern'] == perm_pattern_list[0]]['fonte'].value_counts()
+        hyper_num = hyper_num['hyper']
+        if score_name == "score_final_log(z)":
+            min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
+                                                          best_patterns=perm_pattern_list)
+        else:
+            raise ValueError
+        df = pd.DataFrame(
+            {'dataset': [dataset_name] * 2, 'N': [n_pair] * 2, 'hyper_num': [hyper_num] * 2,
+             'method': [f"min {score_name}", f"mean {score_name}"], 'AP': [min_ap, mean_ap]})
+
+    # df_all = pd.concat([df, df_dive_word2vec])
+    df_all = df
+    df_all['method_format'] = df_all['method'].map(method_names)
+    datasetnames_unique = df_all['dataset'].unique().tolist()
+    rename_dataset = {}
+    for k in datasetnames_unique:
+        rename_dataset[k] = os.path.basename(k)
+
+    df_all['dataset'] = df_all['dataset'].map(rename_dataset)
     return df_all
