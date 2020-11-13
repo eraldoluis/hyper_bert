@@ -1,6 +1,9 @@
+import os
+
 import pandas as pd
 import numpy as np
 import torch
+
 method_names = {'word2vec': 'Word2vec C', 'summation_dot_product': 'DIVE \u0394S * C ', 'dot_product': 'DIVE C',
                 'rnd': 'random', 'summation': 'DIVE \u0394S', 'summation_word2vec': 'DIVE \u0394S * Word2vec C',
                 'all_subword mean_positional_rank': 'BERT Mean Pos Rank', 'all_subword min_positional_rank': 'BERT '
@@ -12,6 +15,13 @@ method_names = {'word2vec': 'Word2vec C', 'summation_dot_product': 'DIVE \u0394S
                 'mean score_final_log(z)': 'BERT Mean Pos Rank (log(z))', 'mean score_final_norm': 'BERT Mean Pos '
                                                                                                    'Rank (/ norm)',
                 'min bert_soma_total': 'BERT Min Sum', 'mean bert_soma_total': 'BERT Mean Sum'}
+
+# Melhores padrões HypeNet
+best_pattern_HypeNet_train_logz = ['{} or some other {}', '{} or any other {}', '{} and any other {}',
+                                   '{} is a type of {}', '{} which is kind of {}', '{} and some other {}',
+                                   '{} is a {}', '{} a special case of {}', '{} which is a example of {}',
+                                   '{} and others {}', '{} which is called {}', '{} or others {}',
+                                   '{} which is a class of {}', '{} , a {}', '{} including {}']
 
 
 # if combination
@@ -72,7 +82,7 @@ def filter_by_vocab(path_vocab, dict_data):
 def balanceamento(df, len_size, patterns):
     df_rate = df[df['pattern'] == patterns[0]][['hiponimo', 'hiperonimo', 'classe', 'fonte', 'len_total']]
     df_rate = df_rate.groupby(['len_total'])['fonte'].value_counts()
-
+    error_list = []
     dict_values = {'len_total': [], 'true': [], 'false': []}
     for v in len_size:
         if v in df_rate:
@@ -89,8 +99,10 @@ def balanceamento(df, len_size, patterns):
             dict_values['false'].append(false_num)
 
         else:
-            print(f"Balanceamento: {v} não está no dataframe!")
+            error_list.append(v)
 
+    if error_list:
+        print(f"Balanceamento: {error_list} não está no dataframe!")
     df_taxa = pd.DataFrame(dict_values)
     # return df_taxa
     df_taxa['ratio'] = df_taxa['true'] / (df_taxa['true'] + df_taxa['false'])
@@ -201,3 +213,44 @@ def compute_AP_n_best_pattern(df, key_sort, n_best_pattern):
         dict_values['method'].append('mean ' + key_sort)
         dict_values['AP'].append(mean_ap)
     return pd.DataFrame(dict_values)
+
+
+# devolve df de balanceamento True/False em todoo dataset
+def balanceamento_all(df, patterns):
+    df_rate = df[df['pattern'] == patterns[0]][['hiponimo', 'hiperonimo', 'classe', 'fonte', 'len_total']]
+    df_rate = df_rate['fonte'].value_counts()
+    hyper_num = df_rate['hyper']
+    total = df_rate.sum()
+    return pd.DataFrame(
+        {'true': [hyper_num, (hyper_num / total)], 'false': [total - hyper_num, (total - hyper_num) / total],
+         'total': [total, 1]})
+
+
+def compute_min_max_ap_normal(df_value, pattern_list, dataset_name, best_pattern_num=4):
+    dfs = []
+    method_score = ["score_final_log(z)", "score_final_norm"]
+
+    for score_name in method_score[:1]:
+        n_pair = df_value.groupby('pattern').count().iloc[0]['hiponimo']
+        hyper_num = df_value[df_value['pattern'] == pattern_list[0]]['fonte'].value_counts()
+        hyper_num = hyper_num['hyper']
+        if score_name == "score_final_log(z)":
+            min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
+                                                          best_patterns=pattern_list[:best_pattern_num])
+        else:
+            raise ValueError
+        df = pd.DataFrame(
+            {'dataset': [dataset_name] * 2, 'N': [n_pair] * 2, 'hyper_num': [hyper_num] * 2,
+             'method': [f"min {score_name}", f"mean {score_name}"], 'AP': [min_ap, mean_ap]})
+
+    # df_all = pd.concat([df, df_dive_word2vec])
+    df_all = df
+    df_all['method_format'] = df_all['method'].map(method_names)
+    datasetnames_unique = df_all['dataset'].unique().tolist()
+    rename_dataset = {}
+    for k in datasetnames_unique:
+        rename_dataset[k] = os.path.basename(k)
+
+    df_all['dataset'] = df_all['dataset'].map(rename_dataset)
+
+    return df_all
