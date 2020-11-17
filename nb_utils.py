@@ -326,3 +326,18 @@ def compute_min_mean_ap_dot(df_value, pattern_list, dataset_name, best_pattern_n
 
     df_all['dataset'] = df_all['dataset'].map(rename_dataset)
     return df_all
+
+
+def get_df_dive():
+    algo = ['word2vec', 'summation_dot_product']
+    dset_dive = {'baroni2012.json': [algo, [0.7176, 0.8344]], 'BLESS.json': [algo, [0.0911, 0.1552]],
+                 'EVALution.json': [algo, [0.2546, 0.3415]], 'HypeNet_test.json': [algo, [0.2559, 0.3731]],
+                 'kotlerman2010.json': [algo, [0.3950, 0.3659]], 'LenciBenotto.json': [algo, [0.4178,  0.5286]],
+                 'levy2014.json': [algo, [0.1124, 0.1924]], 'turney2014.json': [algo, [0.5132, 0.5683]],
+                 'Weeds.json': [algo, [0.5232, 0.6975]], 'wordnet_test.json': [algo, [0.5683, 0.5725]]
+                 }
+    dfs = []
+    for dataset_name, values in dset_dive.items():
+        df = pd.DataFrame({'dataset': [dataset_name]*2, 'method': values[0], 'AP': values[1]})
+        dfs.append(df)
+    return pd.concat(dfs)
