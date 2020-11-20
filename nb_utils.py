@@ -328,6 +328,47 @@ def compute_min_mean_ap_dot(df_value, pattern_list, dataset_name, best_pattern_n
     return df_all
 
 
+def compute_ap_bert_soma(df_value, pattern_list, dataset_name, tipo, best_pattern_num=4):
+    if tipo == 'dot':
+        perm_pattern = []
+        pattern = pattern_list[:best_pattern_num]
+        for i in range(2, len(pattern) + 1):
+            tmp_p = list(map(list, itertools.permutations(pattern, r=i)))
+            perm_pattern.extend(tmp_p)
+        patterns = []
+        for i in perm_pattern:
+            patterns.append("_".join(i))
+    elif tipo == 'sep':
+        perm_pattern = list(map(list, itertools.permutations(pattern_list[:best_pattern_num], r=2)))
+        patterns = []
+        for i in perm_pattern:
+            patterns.append("_".join(i))
+    elif tipo == 'normal':
+        patterns = pattern_list[:best_pattern_num]
+    else:
+        raise KeyError
+    n_pair = df_value.groupby('pattern').count().iloc[0]['hiponimo']
+    hyper_num = df_value[df_value['pattern'] == patterns[0]]['fonte'].value_counts()
+    hyper_num = hyper_num['hyper']
+    df = df_value[df_value['pattern'].isin(patterns)]
+    min_ap, mean_ap = compute_AP_by_rank(df, key_sort='bert_soma_total',
+                                                      best_patterns=patterns)
+
+    df = pd.DataFrame(
+        {'dataset': [dataset_name] * 2, 'N': [n_pair] * 2, 'hyper_num': [hyper_num] * 2,
+         'method': ["all_subword min_positional_rank", "all_subword mean_positional_rank"], 'AP': [min_ap, mean_ap]})
+
+    df_all = df
+    df_all['method_format'] = df_all['method'].map(method_names)
+    datasetnames_unique = df_all['dataset'].unique().tolist()
+    rename_dataset = {}
+    for k in datasetnames_unique:
+        rename_dataset[k] = os.path.basename(k)
+
+    df_all['dataset'] = df_all['dataset'].map(rename_dataset)
+    return df_all
+
+
 def get_df_dive():
     algo = ['word2vec', 'summation_dot_product']
     dset_dive = {'baroni2012.json': [algo, [0.7176, 0.8344]], 'BLESS.json': [algo, [0.0911, 0.1552]],
