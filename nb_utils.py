@@ -24,6 +24,13 @@ best_pattern_HypeNet_train_logz = ['{} or some other {}', '{} or any other {}', 
                                    '{} and others {}', '{} which is called {}', '{} or others {}',
                                    '{} which is a class of {}', '{} , a {}', '{} including {}']
 
+best_pattern_HypeNet_train_bert_soma_total = ['{} or some other {}', '{} and any other {}', '{} or any other {}',
+                                              '{} is a type of {}', '{} and some other {}', '{} which is kind of {}',
+                                              '{} is a {}', '{} or others {}', '{} and others {}', '{} which is a '
+                                                                                                   'example of {}',
+                                              '{} a special case of {}', '{} , a {}', '{} which is called {}',
+                                              '{} which is a class of {}', '{} including {}']
+
 
 # if combination
 # [[hipo 1st sen], [hipo 2nd sen], [hyper 1st sen], [hyper 2nd sen]]
