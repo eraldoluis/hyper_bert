@@ -389,3 +389,12 @@ def get_df_dive():
         df = pd.DataFrame({'dataset': [dataset_name]*2, 'method': values[0], 'AP': values[1]})
         dfs.append(df)
     return pd.concat(dfs)
+
+
+def get_dataset_names():
+    dnames = {"kotlerman2010.json": "Kotlerman", "levy2014.json": "Medical", "turney2014.json": "TM 14",
+              "baroni2012.json": "LEDS", "EVALution.json": "EVALution", "LenciBenotto.json": "LenciBenotto",
+              "Weeds.json": "Weeds", "BLESS.json": "BLESS", "wordnet_test.json": "WordNet",
+              "HypeNet_test.json": "HypeNet"
+              }
+    return dnames
