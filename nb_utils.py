@@ -244,7 +244,7 @@ def compute_min_mean_ap_normal(df_value, pattern_list, dataset_name, best_patter
         hyper_num = hyper_num['hyper']
         if score_name == "score_final_log(z)":
             min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
-                                                          best_patterns=pattern_list[:best_pattern_num])
+                                                 best_patterns=pattern_list[:best_pattern_num])
         else:
             raise ValueError
         df = pd.DataFrame(
@@ -278,7 +278,7 @@ def compute_min_mean_ap_sep(df_value, pattern_list, dataset_name, best_pattern_n
         hyper_num = hyper_num['hyper']
         if score_name == "score_final_log(z)":
             min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
-                                                          best_patterns=perm_pattern_list)
+                                                 best_patterns=perm_pattern_list)
         else:
             raise ValueError
         df = pd.DataFrame(
@@ -316,7 +316,7 @@ def compute_min_mean_ap_dot(df_value, pattern_list, dataset_name, best_pattern_n
         hyper_num = hyper_num['hyper']
         if score_name == "score_final_log(z)":
             min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
-                                                          best_patterns=perm_pattern_list)
+                                                 best_patterns=perm_pattern_list)
         else:
             raise ValueError
         df = pd.DataFrame(
@@ -359,7 +359,7 @@ def compute_ap_bert_soma(df_value, pattern_list, dataset_name, tipo, best_patter
     hyper_num = hyper_num['hyper']
     df = df_value[df_value['pattern'].isin(patterns)]
     min_ap, mean_ap = compute_AP_by_rank(df, key_sort='bert_soma_total',
-                                                      best_patterns=patterns)
+                                         best_patterns=patterns)
 
     df = pd.DataFrame(
         {'dataset': [dataset_name] * 2, 'N': [n_pair] * 2, 'hyper_num': [hyper_num] * 2,
@@ -380,13 +380,13 @@ def get_df_dive():
     algo = ['word2vec', 'summation_dot_product']
     dset_dive = {'baroni2012.json': [algo, [0.7176, 0.8344]], 'BLESS.json': [algo, [0.0911, 0.1552]],
                  'EVALution.json': [algo, [0.2546, 0.3415]], 'HypeNet_test.json': [algo, [0.2559, 0.3731]],
-                 'kotlerman2010.json': [algo, [0.3950, 0.3659]], 'LenciBenotto.json': [algo, [0.4178,  0.5286]],
+                 'kotlerman2010.json': [algo, [0.3950, 0.3659]], 'LenciBenotto.json': [algo, [0.4178, 0.5286]],
                  'levy2014.json': [algo, [0.1124, 0.1924]], 'turney2014.json': [algo, [0.5132, 0.5683]],
                  'Weeds.json': [algo, [0.5232, 0.6975]], 'wordnet_test.json': [algo, [0.5683, 0.5725]]
                  }
     dfs = []
     for dataset_name, values in dset_dive.items():
-        df = pd.DataFrame({'dataset': [dataset_name]*2, 'method': values[0], 'AP': values[1]})
+        df = pd.DataFrame({'dataset': [dataset_name] * 2, 'method': values[0], 'AP': values[1]})
         dfs.append(df)
     return pd.concat(dfs)
 
@@ -398,3 +398,9 @@ def get_dataset_names():
               "HypeNet_test.json": "HypeNet"
               }
     return dnames
+
+
+def get_method_name_ijcai():
+    mnames = {"min score_final_log(z)": "BERT Min Rank log(Z)", "mean score_final_log(z)": "BERT Average Rank log(Z)",
+              "min bert_soma_total": "BERT Min Rank", "mean bert_soma_total": "BERT Average Rank"}
+    return mnames
