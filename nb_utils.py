@@ -401,6 +401,15 @@ def get_dataset_names():
 
 
 def get_method_name_ijcai():
-    mnames = {"min score_final_log(z)": "BERT Min Rank log(Z)", "mean score_final_log(z)": "BERT Average Rank log(Z)",
-              "min bert_soma_total": "BERT Min Rank", "mean bert_soma_total": "BERT Average Rank"}
+    mnames = {'word2vec': 'Word2vec C', 'summation_dot_product': 'DIVE \u0394S * C ', 'dot_product': 'DIVE C',
+              'rnd': 'random', 'summation': 'DIVE \u0394S', 'summation_word2vec': 'DIVE \u0394S * Word2vec C',
+              'all_subword mean_positional_rank': 'BERT Mean Pos Rank', 'all_subword min_positional_rank': 'BERT '
+                                                                                                           'Min Pos '
+                                                                                                           'Rank',
+              'all_subword max_pattern': 'BERT Max Pattern', 'all_subword mean_pattern': 'BERT Mean Pattern',
+              'min score_final_log(z)': 'BERT Min Rank log(Z)', 'min score_final_norm': 'BERT Min Pos Rank (/ '
+                                                                                              'norm)',
+              'mean score_final_log(z)': 'BERT Average Rank log(Z)', 'mean score_final_norm': 'BERT Mean Pos '
+                                                                                                 'Rank (/ norm)',
+              'min bert_soma_total': 'BERT Min Rank', 'mean bert_soma_total': 'BERT Average Rank'}
     return mnames
