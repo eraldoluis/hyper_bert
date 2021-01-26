@@ -4,6 +4,14 @@ import random
 from bert2 import ClozeBert
 
 
+def escrever_random_pares(word_length_tokenize):
+    path = "./random_pairs.csv"
+    with open(path, mode="w", encoding="utf8") as f:
+        for length, data in word_length_tokenize.items():
+            for pair1, pair2 in data:
+                f.write(f"{pair1[0]}\t{pair1[1]}\t{pair2[0]}\t{pair2[1]}\n")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model_name", type=str, help="path to bert models", required=True)
@@ -34,22 +42,38 @@ def main():
         else:
             word_length[word] = len(cloze_model.tokenizer.tokenize(word))
     counter_length = Counter(word_length)
-    # selecionar os pares com tamanhos determinados
-    word_length_tokenize = {}
+
+    status = {}
     for i in range(2, 15):
-        max_number = 10000
-        word_length_tokenize[i] = []
-        while max_number > 0:
-            sample = random.choice(list(freq.items()))
-            sample2 = random.choice(list(freq.items()))
-            #TODO
+        status[i] = False
 
+    empty_length = True
+    word_length_tokenize = {}
+    while empty_length:
+        sample = random.choice(list(word_length.items()))
+        sample2 = random.choice(list(word_length.items()))
+        len_sample = sample[1] + sample2[1]
+        print(len_sample)
+        if len_sample in word_length_tokenize.keys():
+            if not status[len_sample]:
+                if [sample, sample2] not in word_length_tokenize[len_sample]:
+                    word_length_tokenize[len_sample].append([sample, sample2])
+                    if len(word_length_tokenize[len_sample]) >= 10000:
+                        status[len_sample] = True
+                        print(f"Len {len_sample} chegou a 10000!")
+        elif len_sample < 15:
+            word_length_tokenize[len_sample] = []
+            word_length_tokenize[len_sample].append([sample, sample2])
 
+        if all(status.values()):
+            break
 
-    return cloze_model, counter_length
+    escrever_random_pares(word_length_tokenize)
+
+    return cloze_model, word_length_tokenize
 
 
 if __name__ == '__main__':
-    model, freq = main()
+    main()
     # EN params
-    # -m bert-base-uncased -l ./UKWAC_frequency_words.txt -c 5
+    # -m bert-base-uncased -l ./UKWAC_frequency_words.txt -c 3
