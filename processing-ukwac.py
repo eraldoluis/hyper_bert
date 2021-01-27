@@ -1,5 +1,5 @@
 from collections import Counter
-path_local = "/mnt/Data/Downloads-2/ukwac_subset_10M.txt"
+path_local = "/mnt/Data/Downloads-2/ukwac_subset_100M.txt"
 
 # stopword from dive
 path_stopword = "./stop_word_list"

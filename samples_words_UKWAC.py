@@ -1,4 +1,7 @@
 from collections import Counter
+from collections import defaultdict
+
+from itertools import combinations_with_replacement
 import argparse
 import random
 from bert2 import ClozeBert
@@ -7,9 +10,8 @@ from bert2 import ClozeBert
 def escrever_random_pares(word_length_tokenize):
     path = "./random_pairs.csv"
     with open(path, mode="w", encoding="utf8") as f:
-        for length, data in word_length_tokenize.items():
-            for pair1, pair2 in data:
-                f.write(f"{pair1[0]}\t{pair1[1]}\t{pair2[0]}\t{pair2[1]}\n")
+        for data in word_length_tokenize:
+            f.write(f"{data[0]}\t{data[1]}\t{data[2]}\t{data[3]}\n")
 
 
 def main():
@@ -42,38 +44,50 @@ def main():
         else:
             word_length[word] = len(cloze_model.tokenizer.tokenize(word))
     counter_length = Counter(word_length)
+    inv_word_len = defaultdict(list)
+    _ = {inv_word_len[v].append(k) for k, v in word_length.items()}
 
+    # Reduzir o campo de busca
+    sizes = set(word_length.values())
+    candidatos = list(combinations_with_replacement(sizes, 2))
+    candidatos_dict = {}
+    for size in candidatos:
+        len_sample = sum(size)
+        if len_sample > 15:
+            continue
+        if len_sample in candidatos_dict:
+            candidatos_dict[len_sample].append(size)
+        else:
+            candidatos_dict[len_sample] = []
+            candidatos_dict[len_sample].append(size)
+    del candidatos
+
+    word_len_tokenize = []
     status = {}
-    for i in range(2, 15):
-        status[i] = False
+    for size, combs in candidatos_dict.items():
+        # size, combs = comprimento par, ex: 4: (1,3), (2,2)
+        status[size] = 0
+        while status[size] < 10:
+            comb = random.choice(combs) # (1,3)
+            idx = random.choice([0, 1]) # indice da tupla acima
+            if idx == 1:
+                hipo_len, hiper_len = comb[1], comb[0]
+            else:
+                hipo_len, hiper_len = comb[0], comb[1]
+            hipo_word = random.choice(inv_word_len[hipo_len])
+            hiper_word = random.choice(inv_word_len[hiper_len])
 
-    empty_length = True
-    word_length_tokenize = {}
-    while empty_length:
-        sample = random.choice(list(word_length.items()))
-        sample2 = random.choice(list(word_length.items()))
-        len_sample = sample[1] + sample2[1]
-        print(len_sample)
-        if len_sample in word_length_tokenize.keys():
-            if not status[len_sample]:
-                if [sample, sample2] not in word_length_tokenize[len_sample]:
-                    word_length_tokenize[len_sample].append([sample, sample2])
-                    if len(word_length_tokenize[len_sample]) >= 10000:
-                        status[len_sample] = True
-                        print(f"Len {len_sample} chegou a 10000!")
-        elif len_sample < 15:
-            word_length_tokenize[len_sample] = []
-            word_length_tokenize[len_sample].append([sample, sample2])
+            if (hipo_word, hipo_len, hiper_word, hiper_len) not in word_len_tokenize:
+                word_len_tokenize.append((hipo_word, hipo_len, hiper_word, hiper_len))
+                status[size] += 1
+        print(f"Terminado o status {size}")
 
-        if all(status.values()):
-            break
+    # escrever_random_pares(word_len_tokenize)
 
-    escrever_random_pares(word_length_tokenize)
-
-    return cloze_model, word_length_tokenize
+    return cloze_model, candidatos_dict, word_length, inv_word_len
 
 
 if __name__ == '__main__':
-    main()
+    m, candi, freq, inv = main()
     # EN params
     # -m bert-base-uncased -l ./UKWAC_frequency_words.txt -c 3
