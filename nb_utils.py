@@ -1,6 +1,6 @@
 import itertools
 import os
-
+import random
 import pandas as pd
 import numpy as np
 import torch
@@ -126,14 +126,43 @@ def logsumexp_normalization(df_data, len_list, pattern_list):
     for size in len_list:
         log_store[size] = {}
         logsumexp_store[size] = {}
-        normalization[size] = {}
         for p in pattern_list:
             if p in log_store:
                 raise ValueError
             values = df[(df.pattern == p) & (df.len_total == size)]
             log_store[size][p] = torch.tensor(values['bert_soma_total'].tolist())
             logsumexp_store[size][p] = torch.logsumexp(log_store[size][p], dim=0)
-            normalization[size][p] = torch.sum(log_store[size][p])
+
+    df['log(Z)'] = df.apply(lambda row: logsumexp_store[row['len_total']][row['pattern']].item(), axis=1)
+    # df['sum_bert_by_tokensize'] = df.apply(lambda row: normalization[row['len_total']][row['pattern']].item(), axis=1)
+    # score final soma_total - log(Z)
+    df['score_final_log(z)'] = df['bert_soma_total'] - df['log(Z)']
+    # df['score_final_norm'] = df['bert_soma_total'] / df['sum_bert_by_tokensize']
+    return df
+
+# logsumexp para cada tamanho subtoken usando exemplos random 
+def logsumexp_random_logZ(df_data, len_list, pattern_list, df_random, fill_number = 0):
+    df = df_data.copy()
+    df_r = df_random.copy()
+    log_store = {}
+    logsumexp_store = {}
+    normalization = {}
+    for size in len_list:
+        log_store[size] = {}
+        logsumexp_store[size] = {}
+        for p in pattern_list:
+            if p in log_store:
+                raise ValueError
+            values = df[(df.pattern == p) & (df.len_total == size)]
+            values = values['bert_soma_total'].tolist()
+            values_random = df_r[(df_r.pattern == p) & (df_r.len_total == size)]
+            values_random = values_random['bert_soma_total'].tolist()
+            random.shuffle(values_random)
+            idx = fill_number-len(values) if fill_number > len(values) else 0
+            values_random = values_random[:idx]
+            values = values + values_random
+            log_store[size][p] = torch.tensor(values)
+            logsumexp_store[size][p] = torch.logsumexp(log_store[size][p], dim=0)
 
     df['log(Z)'] = df.apply(lambda row: logsumexp_store[row['len_total']][row['pattern']].item(), axis=1)
     # df['sum_bert_by_tokensize'] = df.apply(lambda row: normalization[row['len_total']][row['pattern']].item(), axis=1)
