@@ -8,7 +8,7 @@ from bert2 import ClozeBert
 
 
 def escrever_random_pares(word_length_tokenize):
-    path = "./random_pairs.csv"
+    path = "./random_pairs-pt.csv"
     with open(path, mode="w", encoding="utf8") as f:
         for data in word_length_tokenize:
             f.write(f"{data[0]}\t{data[1]}\t{data[2]}\t{data[3]}\n")
@@ -67,9 +67,9 @@ def main():
     for size, combs in candidatos_dict.items():
         # size, combs = comprimento par, ex: 4: (1,3), (2,2)
         status[size] = 0
-        while status[size] < 10:
-            comb = random.choice(combs) # (1,3)
-            idx = random.choice([0, 1]) # indice da tupla acima
+        while status[size] < 30000:
+            comb = random.choice(combs)  # (1,3)
+            idx = random.choice([0, 1])  # indice da tupla acima
             if idx == 1:
                 hipo_len, hiper_len = comb[1], comb[0]
             else:
@@ -81,13 +81,14 @@ def main():
                 word_len_tokenize.append((hipo_word, hipo_len, hiper_word, hiper_len))
                 status[size] += 1
         print(f"Terminado o status {size}")
-
-    # escrever_random_pares(word_len_tokenize)
+    escrever_random_pares(word_len_tokenize)
 
     return cloze_model, candidatos_dict, word_length, inv_word_len
 
 
 if __name__ == '__main__':
-    m, candi, freq, inv = main()
+    main()
     # EN params
     # -m bert-base-uncased -l ./UKWAC_frequency_words.txt -c 3
+    # PT params
+    # -m neuralmind/bert-base-portuguese-cased -l ./BRWAC_frequency_words.txt -c 5
