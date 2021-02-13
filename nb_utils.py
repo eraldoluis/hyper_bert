@@ -440,5 +440,7 @@ def get_method_name_ijcai():
                                                                                               'norm)',
               'mean score_final_log(z)': 'BERT Average Rank log(Z)', 'mean score_final_norm': 'BERT Mean Pos '
                                                                                                  'Rank (/ norm)',
-              'min bert_soma_total': 'BERT Min Rank', 'mean bert_soma_total': 'BERT Average Rank'}
+              'min bert_soma_total': 'BERT Min Rank', 'mean bert_soma_total': 'BERT Average Rank',
+              'BERT Min Pos Rank (log(z))': 'BERT Min Rank log(Z)' , 'BERT Mean Pos Rank (log(z))': 'BERT Average Rank log(Z)', 
+              'BERT Min Pos Rank': 'BERT Min Rank', 'BERT Mean Pos Rank': 'BERT Average Rank'}
     return mnames
