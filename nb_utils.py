@@ -70,6 +70,27 @@ def create_dataframe(json_dict, combination=False, separator=""):
     df['len_total'] = df['len_hipo'] + df['len_hiper']
     return df
 
+def create_dataframe_maskAll(json_dict, separator=""):
+
+    dict_values = {'hiponimo': [], 'hiperonimo': [], 'classe': [], 'fonte': [], 'pattern': [],
+                   'len_hipo': [], 'len_hiper': [], 'len_total': [], 'bert_soma_total': []}
+    for data, values in json_dict.items():
+        hipo, hiper, classe, fonte = data.strip().split(separator)
+        len_pair = values['comprimento']
+        len_total = sum(len_pair)
+        for pattern, score in values.items():
+            if pattern == "comprimento":
+                continue
+            dict_values['hiponimo'].append(hipo)
+            dict_values['hiperonimo'].append(hiper)
+            dict_values['classe'].append(classe)
+            dict_values['fonte'].append(fonte)
+            dict_values['len_total'].append(len_total)
+            dict_values['pattern'].append(pattern)
+            dict_values['len_hipo'].append(len_pair[0])
+            dict_values['len_hiper'].append(len_pair[1])
+            dict_values['bert_soma_total'].append(sum(score))
+    return pd.DataFrame(dict_values)
 
 def filter_by_vocab(path_vocab, dict_data):
     new_data = {}
