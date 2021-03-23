@@ -327,7 +327,7 @@ class ClozeBert:
                 self.model.eval()
                 with torch.no_grad():
                     examples = torch.tensor(sentences, device=self.device)
-                    segments_tensors = torch.zeros(len(sentences), len(sentences[0]))
+                    segments_tensors = torch.zeros(len(sentences), len(sentences[0]), device=self.device)
                     outputs = self.model(examples, segments_tensors)  # , segments_tensors)
                 predict = outputs[0]
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, token_sentence]
