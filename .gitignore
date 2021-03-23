@@ -115,3 +115,23 @@ datasets/dataset_tokenlen_1_2
 datasets/artificial
 
 en-model/
+
+BRrandom.tsv
+
+*.txt
+
+make_dataset_article.py
+
+processing-brwac.py
+
+random_pairs-pt.csv
+
+random_pairs.csv
+
+saida_topk.tsv
+
+saida_topk2.tsv
+
+log-repeated
+
+ENrandom.tsv
