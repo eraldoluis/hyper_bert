@@ -5,6 +5,7 @@ import logging
 import argparse
 import json
 import os
+import numpy as np
 import itertools
 
 logger = logging.getLogger(__name__)
@@ -296,6 +297,45 @@ class ClozeBert:
 
         return sentences, hyponym_tokenize, hypernym_tokenize, idx
 
+    def build_sentences_mask_all(self, pattern, pair):
+        logger.info("Tokenizing MASK ALL...")
+        hyponym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
+        hypernym_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[1]))
+        pattern_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pattern.format("", "").strip()))
+        model_sentence = [self.tokenizer.cls_token_id] + hyponym_tokenize + pattern_tokenize \
+                         + hypernym_tokenize + [self.tokenizer.sep_token_id]
+        sentences = []
+        for i in range(1, len(model_sentence) - 1):
+            tmp = model_sentence.copy()
+            tmp[i] = self.tokenizer.mask_token_id
+            sentences.append(tmp)
+
+        idx = np.arange(1, len(model_sentence) - 1).tolist()
+
+        return sentences, model_sentence[1:-1], idx
+
+    def bert_maskall(self, patterns, dataset):
+        words_probs_s = {}
+        for row in dataset:
+            pair = row[0:2]
+            words_probs_s["\t".join(row)] = {}
+            comprimento = [len(self.tokenizer.tokenize(pair[0])), len(self.tokenizer.tokenize(pair[1]))]
+            words_probs_s["\t".join(row)]["comprimento"] = comprimento
+            for pattern in patterns:
+                sentences, token_sentence, idx_mask = self.build_sentences_mask_all(pattern, pair)
+                logger.info("Predicting MASK_ALL...")
+                self.model.eval()
+                with torch.no_grad():
+                    examples = torch.tensor(sentences, device=self.device)
+                    segments_tensors = torch.zeros(len(sentences), len(sentences[0]))
+                    outputs = self.model(examples, segments_tensors)  # , segments_tensors)
+                predict = outputs[0]
+                predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, token_sentence]
+
+                words_probs_s["\t".join(row)][pattern] = predict.cpu().numpy().tolist()
+
+        return words_probs_s
+
 
 def load_eval_file(f_in):
     eval_data = []
@@ -335,6 +375,7 @@ def main():
     group.add_argument("--bert_score_dot_comb", action="store_true")
     group.add_argument("--bert_score_sep_comb", action="store_true")
     group.add_argument("--bert_score", action="store_true")
+    group.add_argument("--bert_score_maskall", action="store_true")
     args = parser.parse_args()
     print("Iniciando bert...")
     cloze_model = ClozeBert(args.model_name)
@@ -351,6 +392,8 @@ def main():
             dir_name = "zscore"
         elif args.zscore_exp:
             dir_name = "zscore_exp"
+        elif args.bert_score_maskall:
+            dir_name = "bert_score_maskall"
         else:
             dir_name = "none"
         readable = datetime.datetime.fromtimestamp(int(datetime.datetime.now().timestamp()))
@@ -415,6 +458,9 @@ def main():
     #     logger.info(f"Run BERT score normal= {args.bert_score}")
     #     # com bert score
     #     result = cloze_model.bert_sentence_score(en_patterns, pairs_token_1)
+    # elif args.bert_score_maskall:
+    #     logger.info(f"Run BERT MASK ALL= {args.bert_score_maskall}")
+    #     result = cloze_model.bert_maskall(patterns[:3], pairs)
     # else:
     #     logger.info(f"nenhum método selecionado")
     #     raise ValueError
@@ -434,20 +480,27 @@ def main():
                     # com bert score separado com .
                     hyper_total = 0
                     oov_num = 0
-                    result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(hypeNet_best_patterns[:comb_n_best],
-                                                                                        eval_data)
+                    result = cloze_model.bert_sentence_score_multi_pattern_one_sentence(
+                        hypeNet_best_patterns[:comb_n_best],
+                        eval_data)
                 elif args.bert_score_sep_comb:
                     logger.info(f"Run BERT score sep comb= {args.bert_score_sep_comb}")
                     # com bert score separado com [sep]
                     hyper_total = 0
                     oov_num = 0
-                    result = cloze_model.bert_sentence_score_multi_pattern(hypeNet_best_patterns[:comb_n_best], eval_data)
+                    result = cloze_model.bert_sentence_score_multi_pattern(hypeNet_best_patterns[:comb_n_best],
+                                                                           eval_data)
                 elif args.bert_score:
                     logger.info(f"Run BERT score normal= {args.bert_score}")
                     # com bert score normal, usando todos os padrões sem combinar
                     hyper_total = 0
                     oov_num = 0
                     result = cloze_model.bert_sentence_score(en_patterns, eval_data)
+                elif args.bert_score_maskall:
+                    logger.info(f"Run BERT MASK ALL= {args.bert_score_maskall}")
+                    hyper_total = 0
+                    oov_num = 0
+                    result = cloze_model.bert_maskall(en_patterns, eval_data)
                 else:
                     logger.info(f"nenhum método selecionado")
                     raise ValueError
@@ -461,3 +514,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# CUDA_VISIBLE_DEVICES=3 python bert2.py -m neuralmind/bert-base-portuguese-cased -e ./datasetRandomBr -o ./models --bert_score > saida_BR_random 2>error_BR_Random &
