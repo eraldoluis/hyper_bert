@@ -15,7 +15,8 @@ method_names = {'word2vec': 'Word2vec C', 'summation_dot_product': 'DIVE \u0394S
                                                                                                 'norm)',
                 'mean score_final_log(z)': 'BERT Mean Pos Rank (log(z))', 'mean score_final_norm': 'BERT Mean Pos '
                                                                                                    'Rank (/ norm)',
-                'min bert_soma_total': 'BERT Min Sum', 'mean bert_soma_total': 'BERT Mean Sum'}
+                'min bert_soma_total': 'BERT Min Sum', 'mean bert_soma_total': 'BERT Mean Sum',
+                'min score_pattern_mean': 'BERT Min Rank Pattern', 'mean score_pattern_mean': 'BERT Average Rank Pattern'}
 
 # Melhores padrões HypeNet
 best_pattern_HypeNet_train_logz = ['{} or some other {}', '{} or any other {}', '{} and any other {}',
@@ -70,7 +71,7 @@ def create_dataframe(json_dict, combination=False, separator=""):
     df['len_total'] = df['len_hipo'] + df['len_hiper']
     return df
 
-def create_dataframe_maskAll(json_dict, separator=""):
+def create_dataframe_maskAll(json_dict, separator="\t"):
 
     dict_values = {'hiponimo': [], 'hiperonimo': [], 'classe': [], 'fonte': [], 'pattern': [],
                    'len_hipo': [], 'len_hiper': [], 'len_total': [], 'bert_soma_total': []}
@@ -90,6 +91,28 @@ def create_dataframe_maskAll(json_dict, separator=""):
             dict_values['len_hipo'].append(len_pair[0])
             dict_values['len_hiper'].append(len_pair[1])
             dict_values['bert_soma_total'].append(sum(score))
+    return pd.DataFrame(dict_values)
+
+def create_dataframe_maskAll_pattern(json_dict, separator="\t"):
+    dict_values = {'hiponimo': [], 'hiperonimo': [], 'classe': [], 'fonte': [], 'pattern': [],
+                   'len_hipo': [], 'len_hiper': [], 'len_total': [], 'score_pattern_mean': []}
+    for data, values in json_dict.items():
+        hipo, hiper, classe, fonte = data.strip().split(separator)
+        len_pair = values['comprimento']
+        len_total = sum(len_pair)
+        for pattern, score in values.items():
+            if pattern == "comprimento":
+                continue
+            dict_values['hiponimo'].append(hipo)
+            dict_values['hiperonimo'].append(hiper)
+            dict_values['classe'].append(classe)
+            dict_values['fonte'].append(fonte)
+            dict_values['len_total'].append(len_total)
+            dict_values['pattern'].append(pattern)
+            dict_values['len_hipo'].append(len_pair[0])
+            dict_values['len_hiper'].append(len_pair[1])
+            pattern_score = score[len_pair[0]:-len_pair[1]]
+            dict_values['score_pattern_mean'].append(sum(pattern_score)/len(pattern_score))
     return pd.DataFrame(dict_values)
 
 def filter_by_vocab(path_vocab, dict_data):
@@ -286,15 +309,26 @@ def balanceamento_all(df, patterns):
 
 def compute_min_mean_ap_normal(df_value, pattern_list, dataset_name, best_pattern_num=4):
     dfs = []
-    method_score = ["score_final_log(z)", "score_final_norm"]
+    method_score = ["score_final_log(z)", "score_pattern_mean"]
 
-    for score_name in method_score[:1]:
+    for score_name in method_score:
         n_pair = df_value.groupby('pattern').count().iloc[0]['hiponimo']
         hyper_num = df_value[df_value['pattern'] == pattern_list[0]]['fonte'].value_counts()
         hyper_num = hyper_num['hyper']
         if score_name == "score_final_log(z)":
-            min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
+            if score_name in df_value.columns:
+                min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
                                                  best_patterns=pattern_list[:best_pattern_num])
+            else:
+                print("Não tem como usar score_final_log(z)")
+                continue
+        elif score_name == "score_pattern_mean":
+            if score_name in df_value.columns:
+                min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
+                                                 best_patterns=pattern_list[:best_pattern_num])
+            else:
+                print("Não tem como usar score_pattern_mean")
+                continue
         else:
             raise ValueError
         df = pd.DataFrame(
@@ -384,8 +418,35 @@ def compute_min_mean_ap_dot(df_value, pattern_list, dataset_name, best_pattern_n
     df_all['dataset'] = df_all['dataset'].map(rename_dataset)
     return df_all
 
+def compute_ap_bert_token_pattern(df_value, pattern_list, dataset_name, tipo, best_pattern_num=4, column_sort="score_pattern_mean"):
+    #TODO metodo nao usado
+    if tipo == 'normal':
+        patterns = pattern_list[:best_pattern_num]
+    else:
+        raise KeyError
+    n_pair = df_value.groupby('pattern').count().iloc[0]['hiponimo']
+    hyper_num = df_value[df_value['pattern'] == patterns[0]]['fonte'].value_counts()
+    hyper_num = hyper_num['hyper']
+    df = df_value[df_value['pattern'].isin(patterns)]
+    min_ap, mean_ap = compute_AP_by_rank(df, key_sort=column_sort,
+                                         best_patterns=patterns)
 
-def compute_ap_bert_soma(df_value, pattern_list, dataset_name, tipo, best_pattern_num=4):
+    df = pd.DataFrame(
+        {'dataset': [dataset_name] * 2, 'N': [n_pair] * 2, 'hyper_num': [hyper_num] * 2,
+         'method': ["all_subword min_positional_rank", "all_subword mean_positional_rank"], 'AP': [min_ap, mean_ap]})
+
+    df_all = df
+    df_all['method_format'] = df_all['method'].map(method_names)
+    datasetnames_unique = df_all['dataset'].unique().tolist()
+    rename_dataset = {}
+    for k in datasetnames_unique:
+        rename_dataset[k] = os.path.basename(k)
+
+    df_all['dataset'] = df_all['dataset'].map(rename_dataset)
+    return df_all
+
+
+def compute_ap_bert_soma(df_value, pattern_list, dataset_name, tipo, best_pattern_num=4, column_sort="bert_soma_total"):
     if tipo == 'dot':
         perm_pattern = []
         pattern = pattern_list[:best_pattern_num]
@@ -408,7 +469,7 @@ def compute_ap_bert_soma(df_value, pattern_list, dataset_name, tipo, best_patter
     hyper_num = df_value[df_value['pattern'] == patterns[0]]['fonte'].value_counts()
     hyper_num = hyper_num['hyper']
     df = df_value[df_value['pattern'].isin(patterns)]
-    min_ap, mean_ap = compute_AP_by_rank(df, key_sort='bert_soma_total',
+    min_ap, mean_ap = compute_AP_by_rank(df, key_sort=column_sort,
                                          best_patterns=patterns)
 
     df = pd.DataFrame(
@@ -463,5 +524,7 @@ def get_method_name_ijcai():
                                                                                                  'Rank (/ norm)',
               'min bert_soma_total': 'BERT Min Rank', 'mean bert_soma_total': 'BERT Average Rank',
               'BERT Min Pos Rank (log(z))': 'BERT Min Rank log(Z)' , 'BERT Mean Pos Rank (log(z))': 'BERT Average Rank log(Z)', 
-              'BERT Min Pos Rank': 'BERT Min Rank', 'BERT Mean Pos Rank': 'BERT Average Rank'}
+              'BERT Min Pos Rank': 'BERT Min Rank', 'BERT Mean Pos Rank': 'BERT Average Rank',
+              'min score_pattern_mean': 'BERT Min Rank Pattern', 'mean score_pattern_mean': 'BERT Average Rank Pattern',
+              'BERT Min Rank Pattern': 'BERT Min Rank Pattern', 'BERT Average Rank Pattern': 'BERT Average Rank Pattern'}
     return mnames
