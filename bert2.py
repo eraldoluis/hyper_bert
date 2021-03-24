@@ -330,8 +330,6 @@ class ClozeBert:
                     segments_tensors = torch.zeros(len(sentences), len(sentences[0]), device=self.device)
                     outputs = self.model(examples, segments_tensors)  # , segments_tensors)
                 predict = outputs[0]
-                # predict = torch.softmax(predict, dim=2)
-                predict = torch.log_softmax(predict, dim=2)
                 predict = predict[torch.arange(len(sentences), device=self.device), idx_mask, token_sentence]
 
                 words_probs_s["\t".join(row)][pattern] = predict.cpu().numpy().tolist()
