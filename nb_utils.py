@@ -320,14 +320,12 @@ def compute_min_mean_ap_normal(df_value, pattern_list, dataset_name, best_patter
                 min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
                                                  best_patterns=pattern_list[:best_pattern_num])
             else:
-                print("Não tem como usar score_final_log(z)")
                 continue
         elif score_name == "score_pattern_mean":
             if score_name in df_value.columns:
                 min_ap, mean_ap = compute_AP_by_rank(df_value, key_sort=score_name,
                                                  best_patterns=pattern_list[:best_pattern_num])
             else:
-                print("Não tem como usar score_pattern_mean")
                 continue
         else:
             raise ValueError
