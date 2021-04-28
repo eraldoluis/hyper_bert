@@ -1,13 +1,12 @@
-import datetime
-from transformers import BertConfig, BertForMaskedLM, BertTokenizer
-import torch
-import logging
 import argparse
-import operator
+import datetime
 import json
+import logging
 import os
+
 import numpy as np
-import itertools
+import torch
+from transformers import BertConfig, BertForMaskedLM, BertTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +64,11 @@ class ClozeBert:
         # todos os pares têm o mesmo comprimento
         hyponym_array = []
         hypernym_array = []
-        batch_size = len(pairs)
 
         pattern_tokenize = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pattern.format("", "").strip()))
         pattern_tensor = torch.tensor([pattern_tokenize], device=self.device)
-        sentence_all = torch.empty(0, comprimento + len(pattern_tokenize), dtype=torch.int64)
-        token_find_all = torch.empty(0, comprimento + len(pattern_tokenize), dtype=torch.int64)
+        sentence_all = torch.empty(0, comprimento + len(pattern_tokenize), dtype=torch.int64, device=self.device)
+        token_find_all = torch.empty(0, comprimento + len(pattern_tokenize), dtype=torch.int64, device=self.device)
 
         for pair in pairs:
             hyponym_token = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(pair[0]))
@@ -86,7 +84,7 @@ class ClozeBert:
 
             sentence = sentence.repeat(sentence_len, 1)
             token_find = sentence.diag()
-            sentence.fill_diagonal_(self.tokenizer.mask_token_id)
+            sentence = sentence.fill_diagonal_(self.tokenizer.mask_token_id)
 
             token_find_all = torch.cat((token_find_all, token_find.unsqueeze(dim=0)), 0)
             sentence_all = torch.cat((sentence_all, sentence), 0)
@@ -94,8 +92,8 @@ class ClozeBert:
         idx_token = torch.arange(1, comprimento + len(pattern_tokenize) + 1)
         idx_token = idx_token.repeat(len(sentence_all), 1)
 
-        cls = torch.tensor([[self.tokenizer.cls_token_id]])
-        sep = torch.tensor([[self.tokenizer.sep_token_id]])
+        cls = torch.tensor([[self.tokenizer.cls_token_id]], device=self.device)
+        sep = torch.tensor([[self.tokenizer.sep_token_id]], device=self.device)
         cls = torch.cat([cls] * len(sentence_all))
         sep = torch.cat([sep] * len(sentence_all))
 
@@ -204,14 +202,6 @@ def main():
     patterns.extend(patterns2)
     en_patterns.extend(en_pattern2)
 
-    pairs = [['tigre', 'animal', 'True', 'hyper'], ['casa', 'moradia', 'True', 'hyper'],
-             ['banana', 'abacate', 'False', 'random']]
-
-    pairs_token_1 = [["banana maça", "fruta", "True", "hyper"],
-                     ['acampamento', 'lugar', 'True', 'hyper'],
-                     ['acidente', 'acontecimento', 'True', 'hyper'],
-                     ['pessoa', 'discurso', 'False', 'random']]
-
     if args.pt:
         pattern_train = patterns
     elif args.en:
@@ -238,8 +228,6 @@ def main():
                 eval_data = load_eval_file(f_in)
                 if args.bert_score_maskall:
                     logger.info(f"Run BERT MASK ALL= {args.bert_score_maskall}")
-                    hyper_total = 0
-                    oov_num = 0
                     result = cloze_model.bert_maskall(pattern_train, eval_data, int(args.batch_size))
                 else:
                     logger.info(f"Nenhum método selecionado")
