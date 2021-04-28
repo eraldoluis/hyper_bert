@@ -79,8 +79,8 @@ class ClozeBert:
             hyponym_array.append(hyponym_token)
             hypernym_array.append(hypernym_token)
 
-            hyponym_tensor = torch.tensor([hyponym_token])
-            hypernym_tensor = torch.tensor([hypernym_token])
+            hyponym_tensor = torch.tensor([hyponym_token], device=self.device)
+            hypernym_tensor = torch.tensor([hypernym_token], device=self.device)
             sentence = torch.cat((hyponym_tensor, pattern_tensor, hypernym_tensor), 1)
             sentence_len = sentence.size()[-1]
 
